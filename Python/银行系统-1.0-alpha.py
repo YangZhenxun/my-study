@@ -333,6 +333,6 @@ class ATM(object):
 
     def newCard(self):
         input_searchcard = input("请输入您的索引:")
-        user = self.allusers.user.search_name.get(input_searchcard)
+        user = list(self.allusers.keys())
         print(user)
 ATM(allusers={}).newCard()
