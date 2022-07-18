@@ -177,7 +177,7 @@ class ATM(object):
                 pickle.dump(self.allusers,f)
             return -1
 
-        get_moneies = input("请输入您要取的钱:")
+        get_moneies = int(input("请输入您要取的钱:"))
         if get_moneies > user.card.cardmoney:
             print("金额过大，请重试!")
             return -1
@@ -206,8 +206,47 @@ class ATM(object):
                 pickle.dump(self.allusers,f)
             return -1
 
-        save_moneies = input("请输入你要存款的金额:")
+        save_moneies = int(input("请输入你要存款的金额:"))
         user.card.cardmoney += save_moneies
         with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
             pickle.dump(self.allusers,f)
         print(f"存款成功，您的余额是:{user.card.cardmoney}")
+
+    def give_money(self):
+        inputcardid = input("请输入你的卡号：")
+        user = self.allusers.get(inputcardid)
+
+        if not user:
+            print("卡号有误!")
+            return -1
+
+        if user.card.cardlock == True:
+            print("你的卡现在是锁定的，请解锁后再试......")
+            return -1
+
+        if not self.casePassword:
+            print("密码验证失败.......")
+            self.allusers.card.cardlock = True
+            with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+                pickle.dump(self.allusers,f)
+            return -1
+
+        inputothercardid = input("请输入对方卡号:")
+        other_user = self.allusers.get(inputothercardid)
+
+        if not other_user:
+            print("对方卡号不存在！")
+            return -1
+
+        give_moneies = int(input("请输入转账金额:"))
+
+        if give_moneies > user.card.cardmoney:
+            print("金额过大，请重试！")
+            return -1
+
+        user.card.cardmoney -= give_moneies
+        other_user.card.cardmoney += give_moneies
+        with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+            pickle.dump(self.allusers,f)
+
+        print(f"转账成功！您的余额是：{user.card.cardmoney}")
