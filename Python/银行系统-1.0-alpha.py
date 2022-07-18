@@ -244,9 +244,95 @@ class ATM(object):
             print("金额过大，请重试！")
             return -1
 
+        if other_user.card.cardlock == True:
+            print("对方的卡是锁定的，请等对方解锁后再试......")
+            return -1
+
         user.card.cardmoney -= give_moneies
         other_user.card.cardmoney += give_moneies
         with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
             pickle.dump(self.allusers,f)
 
         print(f"转账成功！您的余额是：{user.card.cardmoney}")
+
+    def chagePassword(self):
+        inputcardid = input("请输入你的卡号：")
+        user = self.allusers.get(inputcardid)
+
+        if not user:
+            print("卡号有误!")
+            return -1
+
+        if user.card.cardlock == True:
+            print("你的卡现在是锁定的，请解锁后再试......")
+            return -1
+
+        if not self.casePassword:
+            print("密码验证失败.......")
+            self.allusers.card.cardlock = True
+            with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+                pickle.dump(self.allusers,f)
+            return -1
+
+        newPassword = input("请输入新密码:")
+
+        if not self.casePassword(newPassword):
+            print("密码验证失败......")
+            return -1
+
+        user.card.cardpasswd = newPassword
+        with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+            pickle.dump(self.allusers,f)
+
+        print("改密成功！")
+
+    def cardlock(self):
+        inputcardid = input("请输入你的卡号：")
+        user = self.allusers.get(inputcardid)
+
+        if not user:
+            print("卡号有误!")
+            return -1
+
+        if user.card.cardlock == True:
+            print("你的卡现在已经是锁定的，无需再锁定......")
+            return -1
+
+        if not self.casePassword:
+            print("密码验证失败，你的卡直接被锁定了......")
+            self.allusers.card.cardlock = True
+            with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+                pickle.dump(self.allusers,f)
+            return -1
+
+        user.card.cardlock = True
+        with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+            pickle.dump(self.allusers,f)
+        print("锁定成功！")
+
+    def uncardlock(self):
+        inputcardid = input("请输入你的卡号：")
+        user = self.allusers.get(inputcardid)
+
+        if not user:
+            print("卡号有误!")
+            return -1
+
+        if user.card.cardlock == False:
+            print("你的卡现在没有锁定，无需再解锁......")
+            return -1
+
+        if not self.casePassword:
+            print("密码验证失败.......")
+            return -1
+
+        user.card.cardlock = False
+        with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+            pickle.dump(self.allusers,f)
+        print("解锁成功！")
+
+    def newCard(self):
+        input_searchcard = input("请输入您的索引:")
+        user = self.allusers.user.search_name.get(input_searchcard)
+        print(user)
+ATM(allusers={}).newCard()
