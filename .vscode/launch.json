@@ -1,0 +1,42 @@
+{
+    // 使用 IntelliSense 了解相关属性。
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch main_window",
+            "request": "launch",
+            "mainClass": "GUI.Java_awt.main_window",
+            "projectName": "my-study--github_a503b464"
+        },
+        {
+            "type": "java",
+            "name": "Launch test",
+            "request": "launch",
+            "mainClass": "Java_Projects.test",
+            "projectName": "my-study--github_a503b464"
+        },
+        {
+            "type": "java",
+            "name": "Launch 五以内的加法",
+            "request": "launch",
+            "mainClass": "Java_Projects.五以内的加法",
+            "projectName": "my-study--github_a503b464"
+        },
+        {
+            "type": "java",
+            "name": "Launch 五以内的加法",
+            "request": "launch",
+            "mainClass": "Java.五以内的加法",
+            "projectName": "my-study--github_a503b464"
+        },
+        {
+            "type": "Ruby",
+            "name": "Debug current file with rdbg",
+            "request": "launch",
+            "program": "${file}"
+        }
+    ]
+}
