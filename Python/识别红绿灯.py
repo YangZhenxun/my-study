@@ -27,4 +27,4 @@ def Tosee(redtime,greentime,yellowtime):
                             time.sleep(1)
                             bar()
                 elif whatD == "绿":
-                    
+                    print("None......")
