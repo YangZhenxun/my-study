@@ -177,3 +177,37 @@ class ATM(object):
                 pickle.dump(self.allusers,f)
             return -1
 
+        get_moneies = input("请输入您要取的钱:")
+        if get_moneies > user.card.cardmoney:
+            print("金额过大，请重试!")
+            return -1
+
+        user.card.cardmoney -= get_moneies
+        with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+            pickle.dump(self.allusers,f)
+        print(f"取款成功，您的余额是:{user.card.cardmoney}")
+
+    def save_money(self):
+        inputcardid = input("请输入你的卡号：")
+        user = self.allusers.get(inputcardid)
+
+        if not user:
+            print("卡号有误!")
+            return -1
+
+        if user.card.cardlock == True:
+            print("你的卡现在是锁定的，请解锁后再试......")
+            return -1
+
+        if not self.casePassword:
+            print("密码验证失败.......")
+            self.allusers.card.cardlock = True
+            with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+                pickle.dump(self.allusers,f)
+            return -1
+
+        save_moneies = input("请输入你要存款的金额:")
+        user.card.cardmoney += save_moneies
+        with open("D:\\my-study--github\\Python\\info.yzx","wb") as f:
+            pickle.dump(self.allusers,f)
+        print(f"存款成功，您的余额是:{user.card.cardmoney}")
