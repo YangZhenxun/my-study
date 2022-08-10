@@ -8,9 +8,9 @@ def __init__():
         try:
             a = int(input(str(n1) + "+" + str(n2) + "="))
             if a == maths:
-                print("你答对了!")
+                print("你答对了!\n\r",end = "")
             else:
-                print(f"你答错了！\n正确答案是{maths}")
+                print(f"你答错了！\n正确答案是{maths}\n\r",end = "")
         except:
             pass
 
