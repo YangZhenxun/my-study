@@ -5,7 +5,7 @@ Package:
 os
 pickle
 '''
-import pickle,os
+import pickle
 
 class Card(object):
     '''
@@ -41,15 +41,25 @@ class User(object):
         self.search_name = search_name
         self.card = card
 
+
 class Admin(object):
-    '''
+    """
     函数:openview,haveview,incase_admin,admin_xinxi
     :用于显示开机/使用视图，也用于检查管理员的身份。
-    '''
-    def admin_xinxi(self):
-        '''
+    """
+
+    def __init__(self):
+        """
+        __init__
+        """
+        super.__init__(self)
+        self.admin_name = None
+        self.admin_passwd = None
+
+    def admin_info(self):
+        """
         定义管理员的信息
-        '''
+        """
         one = "杨"
         two = "震"
         three = "勋"
@@ -59,9 +69,9 @@ class Admin(object):
         self.admin_passwd = "201"+"204"+"13"
 
     def openview(self):
-        '''
+        """
         开始视图
-        '''
+        """
         print("**********************************************")
         print("*                                            *")
         print("*                                            *")
@@ -71,9 +81,9 @@ class Admin(object):
         print("**********************************************")
 
     def haveview(self):
-        '''
+        """
         使用视图
-        '''
+        """
         print("**********************************************")
         print("*           开户（1）     查询（2）          *")
         print("*           取款（3）     存款（4）          *")
@@ -84,9 +94,9 @@ class Admin(object):
         print("**********************************************")
 
     def incase_admin(self):
-        '''
+        """
         检查Admin的身份
-        '''
+        """
         input_name_admin = input("请输入管理员名字:")
         if self.admin_name != input_name_admin:
             print("管理员信息有误!")
@@ -97,11 +107,12 @@ class Admin(object):
             return -1
         print("正在设置，请稍后......")
 
+
 class ATM(object):
     def __init__(self,allusers):
         self.allusers = allusers
 
-    def CreatUser(self):
+    def creat_user(self):
         Username = input("请输入你的名字:")
 
         if Username == self.allusers.user.name:
@@ -335,4 +346,6 @@ class ATM(object):
         input_searchcard = input("请输入您的索引:")
         user = list(self.allusers.keys())
         print(user)
+
+
 ATM(allusers={}).newCard()
