@@ -1340,7 +1340,7 @@ static PyObject *__pyx_n_s_test_2;
 static PyObject *__pyx_kp_s_test_pyx;
 static PyObject *__pyx_pf_4test_run(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
 static PyObject *__pyx_int_1;
-static PyObject *__pyx_int_6;
+static PyObject *__pyx_int_10;
 static PyObject *__pyx_tuple_;
 static PyObject *__pyx_tuple__6;
 static PyObject *__pyx_tuple__8;
@@ -1352,7 +1352,7 @@ static PyObject *__pyx_codeobj__9;
  * 
  * cdef void _run():             # <<<<<<<<<<<<<<
  *     while True:
- *         n1 = random.randint(1,6)
+ *         n1 = random.randint(1,10)
  */
 
 static void __pyx_f_4test__run(void) {
@@ -1379,16 +1379,16 @@ static void __pyx_f_4test__run(void) {
  * 
  * cdef void _run():
  *     while True:             # <<<<<<<<<<<<<<
- *         n1 = random.randint(1,6)
- *         n2 = random.randint(1,6)
+ *         n1 = random.randint(1,10)
+ *         n2 = random.randint(1,10)
  */
   while (1) {
 
     /* "test.pyx":7
  * cdef void _run():
  *     while True:
- *         n1 = random.randint(1,6)             # <<<<<<<<<<<<<<
- *         n2 = random.randint(1,6)
+ *         n1 = random.randint(1,10)             # <<<<<<<<<<<<<<
+ *         n2 = random.randint(1,10)
  *         math = n1 + n2
  */
     __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_random); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
@@ -1404,8 +1404,8 @@ static void __pyx_f_4test__run(void) {
 
     /* "test.pyx":8
  *     while True:
- *         n1 = random.randint(1,6)
- *         n2 = random.randint(1,6)             # <<<<<<<<<<<<<<
+ *         n1 = random.randint(1,10)
+ *         n2 = random.randint(1,10)             # <<<<<<<<<<<<<<
  *         math = n1 + n2
  *         try:
  */
@@ -1421,8 +1421,8 @@ static void __pyx_f_4test__run(void) {
     __pyx_t_1 = 0;
 
     /* "test.pyx":9
- *         n1 = random.randint(1,6)
- *         n2 = random.randint(1,6)
+ *         n1 = random.randint(1,10)
+ *         n2 = random.randint(1,10)
  *         math = n1 + n2             # <<<<<<<<<<<<<<
  *         try:
  *             inp = int(input(str(n1) + "+" + str(n2) + "="))
@@ -1433,7 +1433,7 @@ static void __pyx_f_4test__run(void) {
     __pyx_t_1 = 0;
 
     /* "test.pyx":10
- *         n2 = random.randint(1,6)
+ *         n2 = random.randint(1,10)
  *         math = n1 + n2
  *         try:             # <<<<<<<<<<<<<<
  *             inp = int(input(str(n1) + "+" + str(n2) + "="))
@@ -1479,7 +1479,7 @@ static void __pyx_f_4test__run(void) {
         __pyx_t_1 = 0;
 
         /* "test.pyx":10
- *         n2 = random.randint(1,6)
+ *         n2 = random.randint(1,10)
  *         math = n1 + n2
  *         try:             # <<<<<<<<<<<<<<
  *             inp = int(input(str(n1) + "+" + str(n2) + "="))
@@ -1584,7 +1584,7 @@ static void __pyx_f_4test__run(void) {
       __pyx_L7_except_error:;
 
       /* "test.pyx":10
- *         n2 = random.randint(1,6)
+ *         n2 = random.randint(1,10)
  *         math = n1 + n2
  *         try:             # <<<<<<<<<<<<<<
  *             inp = int(input(str(n1) + "+" + str(n2) + "="))
@@ -1609,7 +1609,7 @@ static void __pyx_f_4test__run(void) {
  * 
  * cdef void _run():             # <<<<<<<<<<<<<<
  *     while True:
- *         n1 = random.randint(1,6)
+ *         n1 = random.randint(1,10)
  */
 
   /* function exit code */
@@ -1757,11 +1757,11 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   /* "test.pyx":7
  * cdef void _run():
  *     while True:
- *         n1 = random.randint(1,6)             # <<<<<<<<<<<<<<
- *         n2 = random.randint(1,6)
+ *         n1 = random.randint(1,10)             # <<<<<<<<<<<<<<
+ *         n2 = random.randint(1,10)
  *         math = n1 + n2
  */
-  __pyx_tuple_ = PyTuple_Pack(2, __pyx_int_1, __pyx_int_6); if (unlikely(!__pyx_tuple_)) __PYX_ERR(0, 7, __pyx_L1_error)
+  __pyx_tuple_ = PyTuple_Pack(2, __pyx_int_1, __pyx_int_10); if (unlikely(!__pyx_tuple_)) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
@@ -1804,7 +1804,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
 static CYTHON_SMALL_CODE int __Pyx_InitGlobals(void) {
   if (__Pyx_InitStrings(__pyx_string_tab) < 0) __PYX_ERR(0, 1, __pyx_L1_error);
   __pyx_int_1 = PyInt_FromLong(1); if (unlikely(!__pyx_int_1)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_int_6 = PyInt_FromLong(6); if (unlikely(!__pyx_int_6)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_10 = PyInt_FromLong(10); if (unlikely(!__pyx_int_10)) __PYX_ERR(0, 1, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;

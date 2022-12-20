@@ -4,8 +4,8 @@ import random
 
 cdef void _run():
     while True:
-        n1 = random.randint(1,6)
-        n2 = random.randint(1,6)
+        n1 = random.randint(1,10)
+        n2 = random.randint(1,10)
         math = n1 + n2
         try:
             inp = int(input(str(n1) + "+" + str(n2) + "="))
