@@ -1,0 +1,15 @@
+D:\my-study--github\src.new\c#\first\1\bin\Debug\net7.0\1.exe
+D:\my-study--github\src.new\c#\first\1\bin\Debug\net7.0\1.deps.json
+D:\my-study--github\src.new\c#\first\1\bin\Debug\net7.0\1.runtimeconfig.json
+D:\my-study--github\src.new\c#\first\1\bin\Debug\net7.0\1.dll
+D:\my-study--github\src.new\c#\first\1\bin\Debug\net7.0\1.pdb
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\1.csproj.AssemblyReference.cache
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\1.GeneratedMSBuildEditorConfig.editorconfig
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\1.AssemblyInfoInputs.cache
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\1.AssemblyInfo.cs
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\1.csproj.CoreCompileInputs.cache
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\1.dll
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\refint\1.dll
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\1.pdb
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\1.genruntimeconfig.cache
+D:\my-study--github\src.new\c#\first\1\obj\Debug\net7.0\ref\1.dll
