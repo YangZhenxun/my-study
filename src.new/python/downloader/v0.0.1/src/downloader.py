@@ -1,6 +1,6 @@
 """
 Filename : downloader.py
-Author : YangZhen xun
+Author : Yang Zhenxun
 """
 import os
 import sys
