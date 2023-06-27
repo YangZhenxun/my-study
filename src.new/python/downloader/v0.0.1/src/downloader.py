@@ -1,12 +1,13 @@
 """
 Filename : downloader.py
-Author : YangZhen xun
+Author : Yang Zhenxun
 """
 import os
 import sys
 
 import fake_useragent
 import requests
+from urllib import parse
 from rich.console import Console
 from rich.progress import (BarColumn, DownloadColumn, Progress, TextColumn,
                            TimeRemainingColumn, TransferSpeedColumn)
@@ -17,7 +18,7 @@ console = Console()
 def main(url):
     """A main function."""
     filepath = "..\\Downloaded files\\"
-    filename = os.path.normpath(os.path.basename(url))
+    filename = os.path.normpath(os.path.basename(parse.urlparse(url).path))
     user_agent = fake_useragent.UserAgent(\
     path = \
         "D:\\my-study--github\\"\
