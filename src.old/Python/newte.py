@@ -3,6 +3,12 @@ import os
 import time
 import pickle
 
+if os.path.exists("userinfo.txt"):
+    filepath = "userinfo.txt"
+else:
+    open("userinfo.txt", "wb")
+    filepath = "userinfo.txt"
+
 class Admin(object):
     admin = 'YangZhenxun'
     passwd = 'Yzx20120413'
@@ -86,6 +92,8 @@ class ATM(object):
         user = Person(name, idCard, phone, card)
         # user存到字典
         self.allUsers[cardId] = user
+        with open(filepath, "wb") as f:
+            pickle.dump(self.allUsers, f)
         print("开户成功，请牢记卡号(%s)......" % cardId)
 
     # 查询余额
@@ -132,6 +140,8 @@ class ATM(object):
             return -1
         nowmoney -= getmoney
         user.card.cardmoney = nowmoney
+        with open(filepath, "wb") as f:
+            pickle.dump(self.allUsers, f)
         print("取款成功，您目前余额为：%d" % user.card.cardmoney)
 
     # 存款
@@ -155,6 +165,8 @@ class ATM(object):
         nowmoney = int(user.card.cardmoney)
         nowmoney += savemoney
         user.card.cardmoney = nowmoney
+        with open(filepath, "wb") as f:
+            pickle.dump(self.allUsers, f)
         print("取款成功，您目前余额为：%d" % user.card.cardmoney)
 
     # 转账
@@ -192,6 +204,8 @@ class ATM(object):
         tonowmoney += tomoney
         user.card.cardmoney = nowmoney
         usertoid.card.cardmoney = tonowmoney
+        with open(filepath, "wb") as f:
+            pickle.dump(self.allUsers, f)
         print("转账成功，您目前余额为：%d" % user.card.cardmoney)
 
     # 改密码
@@ -217,6 +231,8 @@ class ATM(object):
             print("两次密码输入不一致，密码修改失败")
             return -1
         user.card.cardpasswd = newpasswd
+        with open(filepath, "wb") as f:
+            pickle.dump(self.allUsers, f)
         print("密码修改成功......")
 
     # 锁定
@@ -236,6 +252,8 @@ class ATM(object):
             return -1
         # 锁定
         user.card.cardlock = True
+        with open(filepath, "wb") as f:
+            pickle.dump(self.allUsers, f)
         print("锁定成功......")
 
     # 解锁
@@ -259,6 +277,8 @@ class ATM(object):
             return -1
         # 解锁
         user.card.cardlock = False
+        with open(filepath, "wb") as f:
+            pickle.dump(self.allUsers, f)
         print("解锁成功......")
 
     # 补卡
@@ -276,6 +296,8 @@ class ATM(object):
         # 重新生成卡号
         newcard = self.creatCardId()
         user.card.cardid = newcard
+        with open(filepath, "wb") as f:
+            pickle.dump(self.allUsers, f)
         print("补卡办理成功，这是您的新卡号：%s" % user.card.cardid)
 
     # 销户
@@ -291,6 +313,8 @@ class ATM(object):
             print("密码错误，销户失败......")
             return -1
         self.allUsers.pop(cardnum)
+        with open(filepath, "wb") as f:
+            pickle.dump(self.allUsers, f)
         print("该账户已经被销户......")
 
     # 验证密码,循环三次没有正确就输出错误
@@ -322,12 +346,6 @@ def main():
     if admin.Check():
         return -1
 
-    #存储信息的文件是否存在
-    if os.path.exists("userinfo.txt"):
-        filepath = "userinfo.txt"
-    else:
-        open("userinfo.txt", "wb")
-        filepath = "userinfo.txt"
     # 提款机对象
 
     #如果存储信息的文件非空
@@ -379,9 +397,8 @@ def main():
             # 退出
             if not admin.Check():
                 # 将当前系统中的用户信息保存到文件中
-                f = open(filepath, "wb")
-                pickle.dump(atm.allUsers, f)
-                f.close()
+                with open(filepath, "wb") as f:
+                    pickle.dump(self.allUsers, f)
                 return -1
 
 if __name__ == "__main__":
