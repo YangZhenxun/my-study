@@ -11,12 +11,12 @@ def get_big_file(path,filesize):
                 if not os.path.isfile(target_file):
                     continue
                 size = os.path.getsize(target_file)
+                size = size//1024
                 if size > filesize:
-                    size = size//(1024)
                     size = '{size}KB'.format(size=size)
                     print(target_file, size)
 
 if __name__ == '__main__':
     a = input("请输入要查找的地址：")
-    b = int(input("请输入要查找的大小(KB)："))
+    b = int(eval(input("请输入要查找的大小(KB)：")))
     get_big_file(a,b)
