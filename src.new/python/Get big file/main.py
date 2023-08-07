@@ -1,73 +1,64 @@
 import sys
 import os
-import time
-from PySide6.QtWidgets import QApplication, QMainWindow,QMessageBox, QListWidgetItem
+from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import Slot, QObject, Signal, QThread
-from PySide6.QtGui import QIcon, QPixmap
-from get_big_file_ui import Ui_MainWindow
+import get_big_file_ui
 
 
 
 class AThread(QObject):
     signal_str = Signal(str)
-
-    def __init__(self):
-        super().__init__()
+    complete = Signal()
 
     def get_big_file(self, path, filesize):
-        print("ok")
+        print("ok " + path + " " + str(filesize))
         for dirpath, dirnames, filenames in os.walk(path):
-            QApplication.processEvents()
             for filename in filenames:
-                QApplication.processEvents()
                 target_file = os.path.join(dirpath, filename)
                 if not os.path.isfile(target_file):
                     continue
                 size = os.path.getsize(target_file)
                 size = size//1024
-                if size > filesize:
+                if size >= filesize:
                     size = '{size}KB'.format(size=size)
-                    self.signal_str.emit(str(target_file))
                     print(target_file)
-                    QApplication.processEvents()
+                    self.signal_str.emit(target_file)
+        self.complete.emit()
 
 
 class MainWindow(QMainWindow):
-    a = Signal(str)
-    b = Signal(int)
+    a = Signal(str, int)
+
     def __init__(self):
         super().__init__()
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
-        self.a_thread = AThread()
+        try:
+            self.ui = get_big_file_ui.Ui_MainWindow()
+            self.ui.setupUi(self)
+        except Exception as e:
+            print(e)
         self.work_athread = QThread()
-        self.a.connect(self.a_thread)
-        self.b.connect(self.a_thread)
-        self.a_thread.moveToThread(self.work_athread)
+        self.a_thread = AThread()
+        self.a_thread.complete.connect(self.complete)
         self.a_thread.signal_str.connect(self.add_item)
-
-    def start(self):
-        self.ui.pushButton.setEnabled(False)
-
-
+        self.a.connect(self.a_thread.get_big_file)
+        self.a_thread.moveToThread(self.work_athread)
 
     def add_item(self, text):
-        self.ui.listWidget.addItems(text)
-        QApplication.processEvents()
+        self.ui.listWidget.addItem(str(text))
 
-    def shows(self) -> None:
-        self.main_thread.start()
+    def complete(self):
+        self.ui.pushButton.setEnabled(True)
+        self.work_athread.quit()
+        self.work_athread.wait()
 
-    def show_a(self):
-        self.a_thread.get_big_file(self.path, self.filesize)
+    def to_work_athread(self):
+        self.ui.pushButton.setEnabled(False)
+        self.ui.listWidget.clear()
+        self.a.emit(self.ui.comboBox.currentText(), int(self.ui.lineEdit.text()))
+        self.work_athread.start()
 
 
-if __name__ == "__main__":
-    try:
-        app = QApplication(sys.argv)
-        window = MainWindow()
-        QApplication.processEvents()
-        window.show()
-        sys.exit(app.exec())
-    except Exception as e:
-        QMessageBox.critical(MainWindow(), "Error!", "%s" % e)
+app = QApplication(sys.argv)
+window = MainWindow()
+window.show()
+sys.exit(app.exec())
