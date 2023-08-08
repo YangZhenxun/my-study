@@ -17,7 +17,7 @@ from retry import retry
 signal.signal(signal.SIGINT, multitasking.killall)
 
 console = Console()
-ua = fake_useragent.UserAgent(path=os.path.abspath("user_agent.json"))
+ua = fake_useragent.UserAgent()
 headers = {
     'User-Agent': ua.random
 }
@@ -32,7 +32,7 @@ def split(start: int, end: int, step: int) -> list[tuple[int, int]]:
     return parts
 
 
-def get_file_size(url: str, raise_error: bool = True) -> int:
+def get_file_size(url: str, raise_error: bool = False) -> int:
     '''
     get the file size
 

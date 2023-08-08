@@ -1,6 +1,6 @@
 import sys
 import os
-from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 from PySide6.QtCore import Slot, QObject, Signal, QThread
 import get_big_file_ui
 
@@ -22,7 +22,6 @@ class AThread(QObject):
                 size = size//1024
                 if size >= filesize:
                     size = '{size}KB'.format(size=size)
-                    print(target_file)
                     self.signal_str.emit(target_file)
         self.complete.emit()
 
@@ -41,6 +40,7 @@ class MainWindow(QMainWindow):
         self.a_thread.progress.connect(self.update_progress)
         self.a.connect(self.a_thread.get_big_file)
         self.a_thread.moveToThread(self.work_athread)
+        self.Catalog = ""
 
     def add_item(self, text):
         self.ui.listWidget.addItem(str(text))
@@ -56,11 +56,16 @@ class MainWindow(QMainWindow):
         self.ui.pushButton.setEnabled(False)
         self.ui.listWidget.clear()
         self.ui.progressBar.setRange(0, 0)
-        self.a.emit(self.ui.comboBox.currentText(), int(self.ui.lineEdit.text()))
+        if self.Catalog == "":
+            QMessageBox.critical(self, "Error", "Please select a catalog!")
+        self.a.emit(self.Catalog, int(eval(self.ui.lineEdit.text())))
         self.work_athread.start()
 
     def update_progress(self):
         self.ui.progressBar.setValue(int(self.ui.progressBar.value() + 1))
+
+    def select_catalog(self):
+        self.Catalog = QFileDialog.getExistingDirectory(self, "Select Catalog")
 
 
 app = QApplication(sys.argv)

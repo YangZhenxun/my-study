@@ -25,23 +25,6 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="1">
-     <widget class="QComboBox" name="comboBox">
-      <property name="editable">
-       <bool>true</bool>
-      </property>
-      <item>
-       <property name="text">
-        <string>C:\</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>D:\</string>
-       </property>
-      </item>
-     </widget>
-    </item>
     <item row="0" column="0">
      <widget class="QLabel" name="label">
       <property name="text">
@@ -70,7 +53,7 @@
          <x>0</x>
          <y>0</y>
          <width>377</width>
-         <height>293</height>
+         <height>290</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
@@ -96,6 +79,13 @@
      <widget class="QPushButton" name="pushButton">
       <property name="text">
        <string>OK</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QPushButton" name="pushButton_2">
+      <property name="text">
+       <string>Select Catalog</string>
       </property>
      </widget>
     </item>
@@ -128,6 +118,22 @@
     <hint type="destinationlabel">
      <x>224</x>
      <y>264</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>329</x>
+     <y>42</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>198</x>
+     <y>233</y>
     </hint>
    </hints>
   </connection>

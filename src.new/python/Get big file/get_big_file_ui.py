@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'get_big_file.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.1
+## Created by: Qt User Interface Compiler version 6.5.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,10 +15,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QGridLayout,
-    QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QMainWindow, QMenuBar, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QStatusBar, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QGridLayout, QLabel,
+    QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
+    QMenuBar, QProgressBar, QPushButton, QScrollArea,
+    QSizePolicy, QStatusBar, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -35,14 +35,6 @@ class Ui_MainWindow(object):
         self.progressBar.setValue(0)
 
         self.gridLayout.addWidget(self.progressBar, 6, 0, 1, 2)
-
-        self.comboBox = QComboBox(self.centralwidget)
-        self.comboBox.addItem("")
-        self.comboBox.addItem("")
-        self.comboBox.setObjectName(u"comboBox")
-        self.comboBox.setEditable(True)
-
-        self.gridLayout.addWidget(self.comboBox, 0, 1, 1, 1)
 
         self.label = QLabel(self.centralwidget)
         self.label.setObjectName(u"label")
@@ -64,7 +56,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 377, 293))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 377, 290))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.listWidget = QListWidget(self.scrollAreaWidgetContents)
@@ -87,6 +79,11 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.pushButton, 2, 1, 1, 1)
 
+        self.pushButton_2 = QPushButton(self.centralwidget)
+        self.pushButton_2.setObjectName(u"pushButton_2")
+
+        self.gridLayout.addWidget(self.pushButton_2, 0, 1, 1, 1)
+
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -98,18 +95,17 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.pushButton.clicked.connect(MainWindow.to_work_athread)
+        self.pushButton_2.clicked.connect(MainWindow.select_catalog)
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Get big file", None))
-        self.comboBox.setItemText(0, QCoreApplication.translate("MainWindow", u"C:\\", None))
-        self.comboBox.setItemText(1, QCoreApplication.translate("MainWindow", u"D:\\", None))
-
         self.label.setText(QCoreApplication.translate("MainWindow", u"Please enter the address you are looking for:", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"Please enter the size to be found (KB):", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"List", None))
         self.pushButton.setText(QCoreApplication.translate("MainWindow", u"OK", None))
+        self.pushButton_2.setText(QCoreApplication.translate("MainWindow", u"Select Catalog", None))
     # retranslateUi
 
