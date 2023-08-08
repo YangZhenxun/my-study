@@ -12,7 +12,6 @@ class AThread(QObject):
     progress = Signal()
 
     def get_big_file(self, path, filesize):
-        print("ok " + path + " " + str(filesize))
         for dirpath, dirnames, filenames in os.walk(path):
             for filename in filenames:
                 target_file = os.path.join(dirpath, filename)
@@ -48,6 +47,7 @@ class MainWindow(QMainWindow):
 
     def complete(self):
         self.ui.pushButton.setEnabled(True)
+        self.ui.progressBar.setRange(0, 100)
         self.ui.progressBar.setValue(100)
         self.work_athread.quit()
         self.work_athread.wait()
