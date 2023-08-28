@@ -7,4 +7,3 @@ if len(sys.argv) == 2:
 else:
     print("Please use: python downloader_start.py <url>")
     sys.exit(-1)
-
