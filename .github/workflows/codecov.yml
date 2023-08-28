@@ -1,4 +1,4 @@
-name : codecov's workflow
+name : codecov workflow
 on : push
 jobs:
   build:
