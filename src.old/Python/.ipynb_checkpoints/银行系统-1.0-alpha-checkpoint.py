@@ -15,7 +15,7 @@ class Card(object):
         self.cardPasswd = Password
         self.cardmoney = money
         self.cardlock = False
-        
+
 class User(object):
     '''
     函数 -> __init__
@@ -31,6 +31,5 @@ class User(object):
         self.name = name
         self.search_name = search_name
         self.card = card
-        
+
 class Admin(object):
-    

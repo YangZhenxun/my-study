@@ -1356,7 +1356,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
   /* "test.pyx":5
- * 
+ *
  * while True:
  *     n1 = random.randint(5,10)             # <<<<<<<<<<<<<<
  *     n2 = random.randint(1,5)
@@ -1672,7 +1672,7 @@ if (!__Pyx_RefNanny) {
   /* "test.pyx":2
  * # cython: language_level=3
  * import random             # <<<<<<<<<<<<<<
- * 
+ *
  * while True:
  */
   __pyx_t_1 = __Pyx_Import(__pyx_n_s_random, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 2, __pyx_L1_error)
@@ -1682,7 +1682,7 @@ if (!__Pyx_RefNanny) {
 
   /* "test.pyx":4
  * import random
- * 
+ *
  * while True:             # <<<<<<<<<<<<<<
  *     n1 = random.randint(5,10)
  *     n2 = random.randint(1,5)
@@ -1690,7 +1690,7 @@ if (!__Pyx_RefNanny) {
   while (1) {
 
     /* "test.pyx":5
- * 
+ *
  * while True:
  *     n1 = random.randint(5,10)             # <<<<<<<<<<<<<<
  *     n2 = random.randint(1,5)
@@ -1843,7 +1843,7 @@ if (!__Pyx_RefNanny) {
   /* "test.pyx":1
  * # cython: language_level=3             # <<<<<<<<<<<<<<
  * import random
- * 
+ *
  */
   __pyx_t_2 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);

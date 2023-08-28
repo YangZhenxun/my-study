@@ -1481,7 +1481,7 @@ static PyObject *__pyx_codeobj__8;
 
 /* "downloader.pyx":16
  * console = Console()
- * 
+ *
  * cdef void _main(str url):             # <<<<<<<<<<<<<<
  *     """A main function."""
  *     try:
@@ -2297,7 +2297,7 @@ static void __pyx_f_10downloader__main(PyObject *__pyx_v_url) {
                         __Pyx_GIVEREF(__pyx_t_6);
                         __Pyx_XGIVEREF(__pyx_t_7);
                         __Pyx_ErrRestoreWithState(__pyx_t_10, __pyx_t_6, __pyx_t_7);
-                        __pyx_t_10 = 0; __pyx_t_6 = 0; __pyx_t_7 = 0; 
+                        __pyx_t_10 = 0; __pyx_t_6 = 0; __pyx_t_7 = 0;
                         __PYX_ERR(0, 45, __pyx_L25_except_error)
                       }
                       __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
@@ -2383,7 +2383,7 @@ static void __pyx_f_10downloader__main(PyObject *__pyx_v_url) {
                 __Pyx_GIVEREF(__pyx_t_6);
                 __Pyx_XGIVEREF(__pyx_t_10);
                 __Pyx_ErrRestoreWithState(__pyx_t_7, __pyx_t_6, __pyx_t_10);
-                __pyx_t_7 = 0; __pyx_t_6 = 0; __pyx_t_10 = 0; 
+                __pyx_t_7 = 0; __pyx_t_6 = 0; __pyx_t_10 = 0;
                 __PYX_ERR(0, 32, __pyx_L15_except_error)
               }
               __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -2453,7 +2453,7 @@ static void __pyx_f_10downloader__main(PyObject *__pyx_v_url) {
  *                     progress_bar.update(task_id, advance = size)
  *     except Exception:             # <<<<<<<<<<<<<<
  *         console.print_exception(extra_lines=8, show_locals=True)
- * 
+ *
  */
     __pyx_t_13 = __Pyx_PyErr_ExceptionMatches(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])));
     if (__pyx_t_13) {
@@ -2467,7 +2467,7 @@ static void __pyx_f_10downloader__main(PyObject *__pyx_v_url) {
  *                     progress_bar.update(task_id, advance = size)
  *     except Exception:
  *         console.print_exception(extra_lines=8, show_locals=True)             # <<<<<<<<<<<<<<
- * 
+ *
  * def main(str url):
  */
       __Pyx_GetModuleGlobalName(__pyx_t_12, __pyx_n_s_console); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 51, __pyx_L5_except_error)
@@ -2514,7 +2514,7 @@ static void __pyx_f_10downloader__main(PyObject *__pyx_v_url) {
 
   /* "downloader.pyx":16
  * console = Console()
- * 
+ *
  * cdef void _main(str url):             # <<<<<<<<<<<<<<
  *     """A main function."""
  *     try:
@@ -2550,7 +2550,7 @@ static void __pyx_f_10downloader__main(PyObject *__pyx_v_url) {
 
 /* "downloader.pyx":53
  *         console.print_exception(extra_lines=8, show_locals=True)
- * 
+ *
  * def main(str url):             # <<<<<<<<<<<<<<
  *     try:
  *         _main(url)
@@ -2587,7 +2587,7 @@ static PyObject *__pyx_pf_10downloader_main(CYTHON_UNUSED PyObject *__pyx_self, 
   __Pyx_RefNannySetupContext("main", 0);
 
   /* "downloader.pyx":54
- * 
+ *
  * def main(str url):
  *     try:             # <<<<<<<<<<<<<<
  *         _main(url)
@@ -2607,7 +2607,7 @@ static PyObject *__pyx_pf_10downloader_main(CYTHON_UNUSED PyObject *__pyx_self, 
       __pyx_f_10downloader__main(__pyx_v_url);
 
       /* "downloader.pyx":54
- * 
+ *
  * def main(str url):
  *     try:             # <<<<<<<<<<<<<<
  *         _main(url)
@@ -2618,7 +2618,7 @@ static PyObject *__pyx_pf_10downloader_main(CYTHON_UNUSED PyObject *__pyx_self, 
 
   /* "downloader.pyx":53
  *         console.print_exception(extra_lines=8, show_locals=True)
- * 
+ *
  * def main(str url):             # <<<<<<<<<<<<<<
  *     try:
  *         _main(url)
@@ -2798,7 +2798,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
 
   /* "downloader.pyx":53
  *         console.print_exception(extra_lines=8, show_locals=True)
- * 
+ *
  * def main(str url):             # <<<<<<<<<<<<<<
  *     try:
  *         _main(url)
@@ -3094,7 +3094,7 @@ if (!__Pyx_RefNanny) {
  * @ Author: Yang Zhenxun
  * """
  * import os             # <<<<<<<<<<<<<<
- * 
+ *
  * import fake_useragent
  */
   __pyx_t_1 = __Pyx_Import(__pyx_n_s_os, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
@@ -3104,7 +3104,7 @@ if (!__Pyx_RefNanny) {
 
   /* "downloader.pyx":9
  * import os
- * 
+ *
  * import fake_useragent             # <<<<<<<<<<<<<<
  * import requests
  * from rich.console import Console
@@ -3115,7 +3115,7 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "downloader.pyx":10
- * 
+ *
  * import fake_useragent
  * import requests             # <<<<<<<<<<<<<<
  * from rich.console import Console
@@ -3207,7 +3207,7 @@ if (!__Pyx_RefNanny) {
  * from rich.progress import (BarColumn, DownloadColumn, Progress, TextColumn,
  *                            TimeRemainingColumn, TransferSpeedColumn)
  * console = Console()             # <<<<<<<<<<<<<<
- * 
+ *
  * cdef void _main(str url):
  */
   __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_Console); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)
@@ -3220,7 +3220,7 @@ if (!__Pyx_RefNanny) {
 
   /* "downloader.pyx":53
  *         console.print_exception(extra_lines=8, show_locals=True)
- * 
+ *
  * def main(str url):             # <<<<<<<<<<<<<<
  *     try:
  *         _main(url)
