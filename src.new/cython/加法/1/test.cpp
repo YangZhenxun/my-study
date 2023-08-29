@@ -1349,7 +1349,7 @@ static PyObject *__pyx_codeobj__9;
 
 /* "test.pyx":5
  * import random
- * 
+ *
  * cdef void _run():             # <<<<<<<<<<<<<<
  *     while True:
  *         n1 = random.randint(1,10)
@@ -1376,7 +1376,7 @@ static void __pyx_f_4test__run(void) {
   __Pyx_RefNannySetupContext("_run", 0);
 
   /* "test.pyx":6
- * 
+ *
  * cdef void _run():
  *     while True:             # <<<<<<<<<<<<<<
  *         n1 = random.randint(1,10)
@@ -1531,7 +1531,7 @@ static void __pyx_f_4test__run(void) {
  *                 print("\n" + str(math))
  *             else:
  *                 print("")             # <<<<<<<<<<<<<<
- * 
+ *
  * def run():
  */
         /*else*/ {
@@ -1606,7 +1606,7 @@ static void __pyx_f_4test__run(void) {
 
   /* "test.pyx":5
  * import random
- * 
+ *
  * cdef void _run():             # <<<<<<<<<<<<<<
  *     while True:
  *         n1 = random.randint(1,10)
@@ -1630,7 +1630,7 @@ static void __pyx_f_4test__run(void) {
 
 /* "test.pyx":20
  *                 print("")
- * 
+ *
  * def run():             # <<<<<<<<<<<<<<
  *     _run()
  */
@@ -1655,7 +1655,7 @@ static PyObject *__pyx_pf_4test_run(CYTHON_UNUSED PyObject *__pyx_self) {
   __Pyx_RefNannySetupContext("run", 0);
 
   /* "test.pyx":21
- * 
+ *
  * def run():
  *     _run()             # <<<<<<<<<<<<<<
  */
@@ -1663,7 +1663,7 @@ static PyObject *__pyx_pf_4test_run(CYTHON_UNUSED PyObject *__pyx_self) {
 
   /* "test.pyx":20
  *                 print("")
- * 
+ *
  * def run():             # <<<<<<<<<<<<<<
  *     _run()
  */
@@ -1769,7 +1769,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *                 print("\n" + str(math))
  *             else:
  *                 print("")             # <<<<<<<<<<<<<<
- * 
+ *
  * def run():
  */
   __pyx_tuple__6 = PyTuple_Pack(1, __pyx_kp_u__5); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(0, 18, __pyx_L1_error)
@@ -1789,7 +1789,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
 
   /* "test.pyx":20
  *                 print("")
- * 
+ *
  * def run():             # <<<<<<<<<<<<<<
  *     _run()
  */
@@ -2078,7 +2078,7 @@ if (!__Pyx_RefNanny) {
  * # cython: language_level=3
  * #distutils: language = c++
  * import random             # <<<<<<<<<<<<<<
- * 
+ *
  * cdef void _run():
  */
   __pyx_t_1 = __Pyx_Import(__pyx_n_s_random, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 3, __pyx_L1_error)
@@ -2088,7 +2088,7 @@ if (!__Pyx_RefNanny) {
 
   /* "test.pyx":20
  *                 print("")
- * 
+ *
  * def run():             # <<<<<<<<<<<<<<
  *     _run()
  */

@@ -100,7 +100,7 @@ impl ATM{
           .read_line(&mut something2)
           .expect("读取内容失败！");
         let phone = something2.trim()
-        
+
     }
 }
 
