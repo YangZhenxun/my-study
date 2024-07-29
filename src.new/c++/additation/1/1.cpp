@@ -3,12 +3,12 @@
 
 int main()
 {
-    //创造随机数引擎
+    //Creat a random devcie.
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution < > dis(1, 11);
     while (true) {
-        //创造随机数
+        //Creat random numbers.
         int i1 = dis(gen);
         int i2 = dis(gen);
         std::cout << i1 << "+" << i2 << "=";
