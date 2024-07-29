@@ -1,0 +1,26 @@
+def UV_STRINGIFY(v) -> str:return UV_STRINGIFY_HELPER(v)
+def UV_STRINGIFY_HELPER(v) -> str:return str(v)
+
+UV_VERSION_MAJOR: int = 1
+UV_VERSION_MINOR: int = 47
+UV_VERSION_PATCH: int = 1
+UV_VERSION_IS_RELEASE: int = 0
+UV_VERSION_SUFFIX: str = "dev"
+
+UV_VERSION_HEX = ((UV_VERSION_MAJOR << 16) or \
+    (UV_VERSION_MINOR << 8) or \
+    (UV_VERSION_PATCH))
+
+UV_VERSION_STRING_BASE: str =  \
+    UV_STRINGIFY(UV_VERSION_MAJOR) + "." \
+    + UV_STRINGIFY(UV_VERSION_MINOR) + "." \
+    + UV_STRINGIFY(UV_VERSION_PATCH)
+
+UV_VERSION_STRING = UV_VERSION_STRING_BASE if UV_VERSION_IS_RELEASE \
+    else str(UV_VERSION_STRING_BASE + "-" + UV_VERSION_SUFFIX)
+
+def uv_version() -> int:
+    return UV_VERSION_HEX
+
+def uv_version_string() -> str:
+    return UV_VERSION_STRING
