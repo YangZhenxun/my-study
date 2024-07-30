@@ -1,7 +1,7 @@
-#include <iostream>
+ï»¿#include <iostream>
 #include <random>
 #include <string>
-
+#include <fileapi.h>
 class Admin
 {
 public:
@@ -13,7 +13,7 @@ public:
 		std::cout << "**********************************************";
 		std::cout << "*                                            *";
 		std::cout << "*                                            *";
-		std::cout << "*               »¶Ó­µÇÂ¼ÁªÃËÒøÐÐ             *";
+		std::cout << "*               æ¬¢è¿Žç™»å½•åŠ¨ç‰©é“¶è¡Œ             *";
 		std::cout << "*                                            *";
 		std::cout << "*                                            *";
 		std::cout << "**********************************************";
@@ -21,33 +21,33 @@ public:
 	static void FunctionView()
 	{
 		std::cout << "**********************************************" << std::endl;
-		std::cout << "*           ¿ª»§£¨1£©     ²éÑ¯£¨2£©          *" << std::endl;
-		std::cout << "*           È¡¿î£¨3£©     ´æ¿î£¨4£©          *" << std::endl;
-		std::cout << "*           ×ªÕË£¨5£©     ¸ÄÃÜÂë£¨6)         *" << std::endl;
-		std::cout << "*           Ëø¶¨£¨7£©     ½âËø£¨8£©          *" << std::endl;
-		std::cout << "*           ²¹¿¨£¨9£©     Ïú»§£¨10£©         *" << std::endl;
-		std::cout << "*                  ÍË³ö£¨0£©                 *" << std::endl;
+		std::cout << "*           å¼€æˆ·ï¼ˆ1ï¼‰     æŸ¥è¯¢ï¼ˆ2ï¼‰          *" << std::endl;
+		std::cout << "*           å–æ¬¾ï¼ˆ3ï¼‰     å­˜æ¬¾ï¼ˆ4ï¼‰          *" << std::endl;
+		std::cout << "*           è½¬è´¦ï¼ˆ5ï¼‰     æ”¹å¯†ç ï¼ˆ6)         *" << std::endl;
+		std::cout << "*           é”å®šï¼ˆ7ï¼‰     è§£é”ï¼ˆ8ï¼‰          *" << std::endl;
+		std::cout << "*           è¡¥å¡ï¼ˆ9ï¼‰     é”€æˆ·ï¼ˆ10ï¼‰         *" << std::endl;
+		std::cout << "*                  é€€å‡ºï¼ˆ0ï¼‰                 *" << std::endl;
 		std::cout << "**********************************************" << std::endl;
 	}
 	static int Check()
 	{
 		std::string input_Admin;
-		std::cout << "ÇëÊäÈë¹ÜÀíÔ±ÕË»§£º";
+		std::cout << "è¯·è¾“å…¥ç®¡ç†å‘˜è´¦æˆ·ï¼š";
 		std::getline(std::cin, input_Admin);
 		if (admin == input_Admin)
 		{
-			std::cout << "ÕËºÅÊäÈë´íÎó£¡";
+			std::cout << "è´¦å·è¾“å…¥é”™è¯¯ï¼";
 			return -1;
 		}
 		std::string input_Passwd;
-		std::cout << "ÇëÊäÈë¹ÜÀíÔ±ÃÜÂë£º";
+		std::cout << "è¯·è¾“å…¥ç®¡ç†å‘˜å¯†ç ï¼š";
 		std::getline(std::cin, input_Admin);
 		if (passwd == input_Passwd)
 		{
-			std::cout << "ÃÜÂëÊäÈë´íÎó£¡";
+			std::cout << "å¯†ç è¾“å…¥é”™è¯¯ï¼";
 			return -1;
 		}
-		std::cout << "²Ù×÷³É¹¦£¬Çë²Ù×÷......";
+		std::cout << "æ“ä½œæˆåŠŸï¼Œè¯·æ“ä½œ......";
 		return 0;
 	}
 };
