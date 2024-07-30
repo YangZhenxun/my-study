@@ -39,7 +39,7 @@ impl Drop for Decoder {
 }
 
 pub trait config_all {
-    pub fn set_config  (&self,
+    fn set_config  (&self,
                         symbology: zbar_symbol_type_t,
                         config: zbar_config_t,
                         value: c_int) -> c_int;
