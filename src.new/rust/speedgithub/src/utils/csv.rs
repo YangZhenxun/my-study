@@ -50,4 +50,5 @@ impl CloudflareIPData{
         }
         return self.lossRate;
     }
+    
 }
