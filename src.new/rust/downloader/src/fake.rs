@@ -18,12 +18,12 @@ impl FakeUserAgent {
     }
     pub fn _filter_useragents(&self, request: Option<HashMap<String, String>>){
         let mut filtered_useragents = crate::filter::filter(|x: &HashMap<String, String>|
-            return crate::lin::lin(*x["browser"], self.browsers) != None
-                && crate::lin::lin(*x["os"], self.os) != None
-                && crate::lin::lin(*x["type"], self.platforms) != None
-                && *x["version"] >= self.min_version
-                && *x["percent"] >= self.min_percentage,
-        self.data_browsers);
+            return crate::lin::lin(x["browser"].clone(), self.browsers.clone()) != None
+                && crate::lin::lin(x["os"].clone(), self.os.clone()) != None
+                && crate::lin::lin(x["type"].clone(), self.platforms.clone()) != None
+                && x["version"].parse::<f64>().unwrap() >= self.min_version
+                && x["percent"].parse::<f64>().unwrap() >= self.min_percentage,
+        self.data_browsers.clone());
     }
 }
 
