@@ -1,8 +1,4 @@
-mod fake;
-mod utils;
-mod error;
-mod filter;
-mod lin;
+mod fake_useragent;
 use std::{collections::HashMap, error::Error};
 
 async fn total(url: String) -> Result<(i64, String), Box<dyn Error>> {

@@ -1,5 +1,6 @@
 use std::{collections::HashMap, env::current_exe, error::Error, fs::File, io::Read};
 use log::{trace, warn};
+use crate::fake_useragent::*;
 
 pub fn load() -> Result<Vec<HashMap<String, String>>, Box<dyn Error>>{
     trace!("Using function `load`.");
@@ -19,7 +20,7 @@ pub fn load() -> Result<Vec<HashMap<String, String>>, Box<dyn Error>>{
         None => warn!("Could not find local data/json file or could not parse the contents.")
     }
     if ret == None {
-        Err(Box::new(crate::error::FakeUserAgentError))?;
+        Err(Box::new(error::FakeUserAgentError))?;
     }
     match ret {
         Some(val) => Ok(val),
