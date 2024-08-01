@@ -16,7 +16,7 @@ impl FakeUserAgent {
         let load = crate::utils::load()?;
         Ok(FakeUserAgent {data_browsers:load, ..Default::default()})
     }
-    pub fn _filter_useragents(&self, request: Option<HashMap<String, String>>){
+    pub fn _filter_useragents(&self, request: Option<String>) -> Vec<HashMap<String, String>>{
         let mut filtered_useragents = crate::filter::filter(|x: &HashMap<String, String>|
             return crate::lin::lin(x["browser"].clone(), self.browsers.clone()) != None
                 && crate::lin::lin(x["os"].clone(), self.os.clone()) != None
@@ -24,6 +24,11 @@ impl FakeUserAgent {
                 && x["version"].parse::<f64>().unwrap() >= self.min_version
                 && x["percent"].parse::<f64>().unwrap() >= self.min_percentage,
         self.data_browsers.clone());
+        match request {
+            Some(req) => filtered_useragents = crate::filter::filter(|x: &HashMap<String, String>|x["browser"] == req, filtered_useragents),
+            None => return filtered_useragents
+        }
+        return filtered_useragents;
     }
 }
 
