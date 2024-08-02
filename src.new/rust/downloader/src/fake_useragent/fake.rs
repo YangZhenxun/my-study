@@ -32,6 +32,24 @@ impl FakeUserAgent {
         }
         return filtered_useragents;
     }
+    pub fn getBrowser(&self) -> Vec<HashMap<String, String>> {
+        let mut request = String::new();
+        let mut filtered_browsers = Vec::new();
+        for (value, replacement) in settings::REPLACEMENTS.clone().into_iter(){
+            request = request.replace(&value, replacement.as_str());
+        }
+        request = request.to_lowercase();
+        match settings::SHORTCUTS.get(&request) {
+            Some(val) => request = val.clone(),
+            None => request = request
+        }
+        if request == "random".to_string(){
+            filtered_browsers = self._filter_useragents(None);
+        } else {
+            filtered_browsers = self._filter_useragents(Some(request));
+        }
+        filtered_browsers
+    }
 }
 
 impl Default for FakeUserAgent {
