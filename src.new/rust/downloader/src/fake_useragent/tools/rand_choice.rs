@@ -1,5 +1,7 @@
 use rand::prelude::*;
 
-fn random_choice<T>(list: Vec<T>) -> T{
-    
+pub fn random_choice<T>(list: Vec<T>) -> T
+where T: std::any::Any+Clone{
+    let mut rng = thread_rng();
+    list[rng.gen_range(0..list.len())].clone()
 }

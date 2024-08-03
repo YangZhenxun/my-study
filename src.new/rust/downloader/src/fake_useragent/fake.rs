@@ -1,6 +1,11 @@
 use std::collections::{HashMap, HashSet};
+use log::{trace, warn};
+
 use crate::fake_useragent::tools;
 use crate::fake_useragent::*;
+
+use super::tools::random_choice;
+
 
 pub struct FakeUserAgent{
     pub browsers: Vec<String>,
@@ -8,8 +13,8 @@ pub struct FakeUserAgent{
     pub min_version: f64,
     pub min_percentage: f64,
     pub platforms: Vec<String>,
-    pub fallback: Vec<String>,
-    pub safe_attrs: HashSet<()>,
+    pub fallback: String,
+    pub safe_attrs: HashSet<String>,
     pub data_browsers: Vec<HashMap<String, String>>
 }
 
@@ -20,9 +25,9 @@ impl FakeUserAgent {
     }
     pub fn _filter_useragents(&self, request: Option<String>) -> Vec<HashMap<String, String>>{
         let mut filtered_useragents = tools::filter(|x: &HashMap<String, String>|
-            return tools::lin(x["browser"].clone(), self.browsers.clone()) != None
-                && tools::lin(x["os"].clone(), self.os.clone()) != None
-                && tools::lin(x["type"].clone(), self.platforms.clone()) != None
+            return tools::lin::lin(x["browser"].clone(), self.browsers.clone()) != None
+                && tools::lin::lin(x["os"].clone(), self.os.clone()) != None
+                && tools::lin::lin(x["type"].clone(), self.platforms.clone()) != None
                 && x["version"].parse::<f64>().unwrap() >= self.min_version
                 && x["percent"].parse::<f64>().unwrap() >= self.min_percentage,
         self.data_browsers.clone());
@@ -30,13 +35,12 @@ impl FakeUserAgent {
             Some(req) => filtered_useragents = tools::filter(|x: &HashMap<String, String>|x["browser"] == req, filtered_useragents),
             None => return filtered_useragents
         }
-        return filtered_useragents;
+        filtered_useragents
     }
-    pub fn getBrowser(&self) -> Vec<HashMap<String, String>> {
-        let mut request = String::new();
+    pub fn getBrowser(&self, mut request: String) -> HashMap<String, String> {
         let mut filtered_browsers = Vec::new();
         for (value, replacement) in settings::REPLACEMENTS.clone().into_iter(){
-            request = request.replace(&value, replacement.as_str());
+            request = request.replace(&value, &replacement);
         }
         request = request.to_lowercase();
         match settings::SHORTCUTS.get(&request) {
@@ -48,7 +52,96 @@ impl FakeUserAgent {
         } else {
             filtered_browsers = self._filter_useragents(Some(request));
         }
-        filtered_browsers
+        tools::random_choice::<HashMap<String, String>>(filtered_browsers)
+    }
+    pub fn __getattr__(&self, mut attr: String) -> Result<String, Box<dyn std::error::Error>>{
+        trace!("Starting fake_useragent::FakeUserAgent.__getattr__() method...");
+        let mut filtered_browsers = Vec::new();
+        match self.safe_attrs.get(&attr){
+            Some(att) => Ok(att.to_string()),
+            None => {
+                for (value, replacement) in settings::REPLACEMENTS.clone().into_iter(){
+                    attr = attr.replace(&value, &replacement);
+                }
+                attr = attr.to_lowercase();
+                match settings::SHORTCUTS.get(&attr) {
+                    Some(val) => attr = val.clone(),
+                    None => attr = attr
+                }
+                if attr == "random".to_string(){
+                    filtered_browsers = self._filter_useragents(None);
+                } else {
+                    filtered_browsers = self._filter_useragents(Some(attr.clone()));
+                }
+                match random_choice(filtered_browsers).get("useragent") {
+                    Some(val) => Ok(val.clone()),
+                    None => {
+                        if self.fallback.is_empty(){
+                            return Err(Box::new(FakeUserAgentError))?;
+                        } else {
+                            warn!("Error occurred during getting browser: {attr}, 
+                            but was suppressed with fallback.");
+                            Ok(self.fallback.clone())
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #[inline]
+    pub fn chrome(&self) -> Result<String, Box<dyn std::error::Error>>{
+        let res = self.__getattr__("chrome".to_string())?;
+        Ok(res)
+    }
+    #[inline]
+    pub fn googlechrome(&self) -> Result<String, Box<dyn std::error::Error>>{
+        let res = self.chrome()?;
+        Ok(res)
+    }
+    #[inline]
+    pub fn edge(&self) -> Result<String, Box<dyn std::error::Error>>{
+        let res = self.__getattr__("edge".to_string())?;
+        Ok(res)
+    }
+    #[inline]
+    pub fn firefox(&self) -> Result<String, Box<dyn std::error::Error>>{
+        let res = self.__getattr__("firefox".to_string())?;
+        Ok(res)
+    }
+    #[inline]
+    pub fn ff(&self) -> Result<String, Box<dyn std::error::Error>>{
+        let res = self.firefox()?;
+        Ok(res)
+    }
+    #[inline]
+    pub fn safari(&self) -> Result<String, Box<dyn std::error::Error>>{
+        let res = self.__getattr__("safari".to_string())?;
+        Ok(res)
+    }
+    #[inline]
+    pub fn random(&self) -> Result<String, Box<dyn std::error::Error>>{
+        let res = self.__getattr__("random".to_string())?;
+        Ok(res)
+    }
+    #[inline]
+    pub fn getFirefox(&self) -> HashMap<String, String>{
+        self.getBrowser("firefox".to_string())
+    }
+    #[inline]
+    pub fn getChrome(&self) -> HashMap<String, String>{
+        self.getBrowser("chrome".to_string())
+    }
+    #[inline]
+    pub fn getEdge(&self) -> HashMap<String, String>{
+        self.getBrowser("edge".to_string())
+    }
+    #[inline]
+    pub fn getSafari(&self) -> HashMap<String, String>{
+        self.getBrowser("safari".to_string())
+    }
+    #[inline]
+    pub fn getRandom(&self) -> HashMap<String, String>{
+        self.getBrowser("random".to_string())
     }
 }
 
@@ -75,13 +168,14 @@ impl Default for FakeUserAgent {
                 "mobile".to_string(),
                 "tablet".to_string()
             ],
-            fallback: vec![
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ".to_string(),
-                "AppleWebKit/537.36 (KHTML, like Gecko) ".to_string(),
-                "Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0".to_string()
-            ],
+            fallback:
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ".to_string() +
+                "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0",
             safe_attrs: vec![].into_iter().collect(),
             data_browsers: vec![]
         }
     }
 }
+
+pub type UserAgent = FakeUserAgent;
