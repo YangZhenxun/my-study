@@ -55,7 +55,7 @@ async fn get_filename(map: HeaderMap) -> Result<Option<(Option<String>, Option<S
 async fn main() -> Result<(), Box<dyn Error>> {
     std::env::set_var("RUST_LOG", "trace");
     env_logger::init();
-    let user_agent = fake_useragent::UserAgent::new()?;
+    let user_agent = fake_useragent::UserAgent::new().await?;
     let ua = user_agent.random()?;
     let (tot, name) = total("https://httpbin.org/get", ua).await?;
     match tot{

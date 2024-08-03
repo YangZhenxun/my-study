@@ -6,7 +6,6 @@ use crate::fake_useragent::*;
 
 use super::tools::random_choice;
 
-
 pub struct FakeUserAgent{
     pub browsers: Vec<String>,
     pub os: Vec<String>,
@@ -19,8 +18,8 @@ pub struct FakeUserAgent{
 }
 
 impl FakeUserAgent {
-    pub fn new() -> Result<FakeUserAgent, Box<dyn std::error::Error>> {
-        let load = load()?;
+    pub async fn new() -> Result<FakeUserAgent, Box<dyn std::error::Error>> {
+        let load = load().await?;
         Ok(FakeUserAgent {data_browsers:load, ..Default::default()})
     }
     pub fn _filter_useragents(&self, request: Option<String>) -> Vec<HashMap<String, String>>{

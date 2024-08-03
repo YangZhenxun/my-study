@@ -1,8 +1,10 @@
-use std::{collections::HashMap, env::current_exe, error::Error, fs::{File, create_dir}, io::Read, path::{Path, PathBuf}};
-use log::{info, trace, warn};
+use std::{collections::HashMap, env::current_exe, error::Error, path::Path};
+use log::{trace, warn};
 use crate::fake_useragent::*;
+use tokio::fs::File;
+use tokio::io::AsyncReadExt;
 
-pub fn load() -> Result<Vec<HashMap<String, String>>, Box<dyn Error>>{
+pub async fn load() -> Result<Vec<HashMap<String, String>>, Box<dyn Error>>{
     trace!("Using function `load`.");
     let mut data: Vec<HashMap<String, String>> = Vec::new();
     let mut ret: Option<Vec<HashMap<String, String>>> = None;
@@ -13,23 +15,12 @@ pub fn load() -> Result<Vec<HashMap<String, String>>, Box<dyn Error>>{
                 Some(var) => {
                     let va = var.to_string()+"/data/browsers.json";
                     let val = Path::new(&va);
-                    println!("{}",val.display());
                     if val.exists(){
-                        let _ = File::open(val)?.read_to_string(&mut json_lines)?;
+                        let _ = File::open(val).await?.read_to_string(&mut json_lines).await?;
                         for line in json_lines.lines(){
                             data.push(serde_json::from_str(line)?)
                         }
                         ret = Option::Some(data);
-                    } else {
-                        warn!("`data/browsers.json` does not exist.");
-                        let va2 = var.to_string()+"/data";
-                        let val2 = Path::new(&va2);
-                        if val2.exists(){
-                            let _ = File::create(val)?;
-                        } else {
-                            create_dir(val2)?;
-                            let _ = File::create(val).expect("m");
-                        }
                     }
                 },
                 None => ()
