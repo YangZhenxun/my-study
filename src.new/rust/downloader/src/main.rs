@@ -52,6 +52,7 @@ async fn get_filename(map: HeaderMap) -> Result<Option<(Option<String>, Option<S
 async fn main() -> Result<(), Box<dyn Error>> {
     std::env::set_var("RUST_LOG", "trace");
     env_logger::init();
+    let start = chrono::Utc::now();
     let user_agent = fake_useragent::UserAgent::new().await?;
     let ua = user_agent.random()?;
     let (tot, name) = total("https://httpbin.org/get", ua.clone()).await?;
@@ -64,6 +65,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         None => ()
     }
     let resp = client_res!("https://httpbin.org/get", Client::new(), ua).text().await?;
+    let end = chrono::Utc::now();
     println!("{}", resp);
+    println!("{:#?}", (end-start).num_nanoseconds());
     Ok(())
 }
