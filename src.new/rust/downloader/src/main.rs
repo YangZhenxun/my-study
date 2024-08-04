@@ -14,10 +14,9 @@ macro_rules! client_res {
     };
 }
 
-async fn total(url: &str, ua: String) -> Result<(Option<u64>, Option<String>), Box<dyn Error>> {
+async fn total(url: &str, ua: String, cli: Client) -> Result<(Option<u64>, Option<String>), Box<dyn Error>> {
     trace!("Using total function.");
-    let client = Client::new();
-    let res = client_res!(url, client, ua);
+    let res = client_res!(url, cli, ua);
     match get_filename(res.headers().clone()).await? {
         Some((typ, filename)) => {
             match typ {
@@ -53,9 +52,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     std::env::set_var("RUST_LOG", "trace");
     env_logger::init();
     let start = chrono::Utc::now();
+    let client = Client::new();
     let user_agent = fake_useragent::UserAgent::new().await?;
     let ua = user_agent.random()?;
-    let (tot, name) = total("https://httpbin.org/get", ua.clone()).await?;
+    let (tot, name) = total("https://httpbin.org/get", ua.clone(), client.clone()).await?;
     match tot{
         Some(t) => println!("{}", t),
         None => ()
@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Some(nm) => println!("{}", nm),
         None => ()
     }
-    let resp = client_res!("https://httpbin.org/get", Client::new(), ua).text().await?;
+    let resp = client_res!("https://httpbin.org/get", client, ua).text().await?;
     let end = chrono::Utc::now();
     println!("{}", resp);
     println!("{:#?}", (end-start).num_nanoseconds());
