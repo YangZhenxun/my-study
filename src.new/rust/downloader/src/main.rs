@@ -1,5 +1,5 @@
 mod fake_useragent;
-use std::{collections::HashMap, error::Error, io::Write};
+use std::error::Error;
 use log::{trace, warn};
 use regex::Regex;
 
@@ -19,7 +19,6 @@ async fn total(url: &str, ua: String) -> Result<(Option<u64>, Option<String>), B
     let client = Client::new();
     let res = client_res!(url, client, ua);
     let resb = client_res!(url, client, ua);
-    let mut flname: Option<String> = None;
     match get_filename(resb.headers().clone()).await? {
         Some((typ, filename)) => {
             match typ {
@@ -30,11 +29,10 @@ async fn total(url: &str, ua: String) -> Result<(Option<u64>, Option<String>), B
                 }
                 None => {},
             };
-            flname = filename
+            Ok((res.content_length(), filename))
         },
-        None => flname = None
+        None => Ok((res.content_length(), None))
     }
-    Ok((res.content_length(), flname))
 }
 
 #[inline]

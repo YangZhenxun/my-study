@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use log::{trace, warn};
 
-use crate::fake_useragent::tools;
-use crate::fake_useragent::*;
+use super::tools;
+use super::*;
 
 use super::tools::random_choice;
 
@@ -37,7 +37,6 @@ impl FakeUserAgent {
         filtered_useragents
     }
     pub fn getBrowser(&self, mut request: String) -> HashMap<String, String> {
-        let mut filtered_browsers = Vec::new();
         for (value, replacement) in settings::REPLACEMENTS.clone().into_iter(){
             request = request.replace(&value, &replacement);
         }
@@ -47,15 +46,13 @@ impl FakeUserAgent {
             None => request = request
         }
         if request == "random".to_string(){
-            filtered_browsers = self._filter_useragents(None);
+            return tools::random_choice::<HashMap<String, String>>(self._filter_useragents(None));
         } else {
-            filtered_browsers = self._filter_useragents(Some(request));
+            return tools::random_choice::<HashMap<String, String>>(self._filter_useragents(Some(request)));
         }
-        tools::random_choice::<HashMap<String, String>>(filtered_browsers)
     }
     pub fn __getattr__(&self, mut attr: String) -> Result<String, Box<dyn std::error::Error>>{
-        trace!("Starting fake_useragent::FakeUserAgent.__getattr__() method...");
-        let mut filtered_browsers = Vec::new();
+        trace!("Starting `fake_useragent::FakeUserAgent.__getattr__()` method...");
         match self.safe_attrs.get(&attr){
             Some(att) => Ok(att.to_string()),
             None => {
@@ -68,19 +65,29 @@ impl FakeUserAgent {
                     None => attr = attr
                 }
                 if attr == "random".to_string(){
-                    filtered_browsers = self._filter_useragents(None);
+                    match random_choice(self._filter_useragents(None)).get("useragent") {
+                        Some(val) => Ok(val.clone()),
+                        None => {
+                            if self.fallback.is_empty(){
+                                return Err(Box::new(FakeUserAgentError))?;
+                            } else {
+                                warn!("Error occurred during getting browser: {attr}, 
+                                but was suppressed with fallback.");
+                                Ok(self.fallback.clone())
+                            }
+                        }
+                    }
                 } else {
-                    filtered_browsers = self._filter_useragents(Some(attr.clone()));
-                }
-                match random_choice(filtered_browsers).get("useragent") {
-                    Some(val) => Ok(val.clone()),
-                    None => {
-                        if self.fallback.is_empty(){
-                            return Err(Box::new(FakeUserAgentError))?;
-                        } else {
-                            warn!("Error occurred during getting browser: {attr}, 
-                            but was suppressed with fallback.");
-                            Ok(self.fallback.clone())
+                    match random_choice(self._filter_useragents(Some(attr.clone()))).get("useragent") {
+                        Some(val) => Ok(val.clone()),
+                        None => {
+                            if self.fallback.is_empty(){
+                                return Err(Box::new(FakeUserAgentError))?;
+                            } else {
+                                warn!("Error occurred during getting browser: {attr}, 
+                                but was suppressed with fallback.");
+                                Ok(self.fallback.clone())
+                            }
                         }
                     }
                 }
