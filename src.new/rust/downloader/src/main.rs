@@ -18,8 +18,7 @@ async fn total(url: &str, ua: String) -> Result<(Option<u64>, Option<String>), B
     trace!("Using total function.");
     let client = Client::new();
     let res = client_res!(url, client, ua);
-    let resb = client_res!(url, client, ua);
-    match get_filename(resb.headers().clone()).await? {
+    match get_filename(res.headers().clone()).await? {
         Some((typ, filename)) => {
             match typ {
                 Some(typ) => {
@@ -55,7 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     let user_agent = fake_useragent::UserAgent::new().await?;
     let ua = user_agent.random()?;
-    let (tot, name) = total("https://httpbin.org/get", ua).await?;
+    let (tot, name) = total("https://httpbin.org/get", ua.clone()).await?;
     match tot{
         Some(t) => println!("{}", t),
         None => ()
@@ -64,10 +63,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Some(nm) => println!("{}", nm),
         None => ()
     }
-    let resp = reqwest::get("https://httpbin.org/get")
-        .await?
-        .text()
-        .await?;
+    let resp = client_res!("https://httpbin.org/get", Client::new(), ua).text().await?;
     println!("{}", resp);
     Ok(())
 }
