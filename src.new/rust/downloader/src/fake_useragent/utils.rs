@@ -5,7 +5,7 @@ use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
 pub async fn load() -> Result<Vec<HashMap<String, String>>, Box<dyn Error>>{
-    trace!("Using function `load`.");
+    trace!("Using `downloader::fake_useragent::utils::load`.");
     let mut data: Vec<HashMap<String, String>> = Vec::new();
     let mut ret: Option<Vec<HashMap<String, String>>> = None;
     let mut json_lines = String::new();
