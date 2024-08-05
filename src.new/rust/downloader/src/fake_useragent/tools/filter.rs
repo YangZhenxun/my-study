@@ -1,3 +1,5 @@
+use std::future::Future;
+
 pub fn filter<T, E>(filter_fn: T, to_filter_list: Vec<E>) -> Vec<E>
     where T: FnOnce(&E) -> bool+Copy,
     E:std::any::Any+Clone,{
@@ -8,5 +10,12 @@ pub fn filter<T, E>(filter_fn: T, to_filter_list: Vec<E>) -> Vec<E>
         }
     }
     return list;
+}
 
+pub fn asyfilter<T, E>(filter_fn: T, to_filter_list: Vec<E>) -> Vec<E>
+    where 
+    T: Future<Output = bool>+Copy,
+    E: std::any::Any+Clone,
+    {
+    
 }

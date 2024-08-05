@@ -2,7 +2,7 @@ mod fake_useragent;
 use std::error::Error;
 use log::{trace, warn};
 use regex::Regex;
-
+use rayon::prelude::*;
 use reqwest::{header::{HeaderMap, HeaderValue, USER_AGENT}, Client};
 
 macro_rules! client_res {
@@ -47,6 +47,16 @@ async fn get_filename(map: HeaderMap) -> Result<Option<(Option<String>, Option<S
     }
 }
 
+async fn split(filesize: u64, num_threads: u64) -> Vec<(u64, u64)>{
+    let chuck_size= filesize / num_threads;
+    let i = (1..=num_threads).into_par_iter().map(|i|{
+        let start = chuck_size * i;
+        let end = if i <= num_threads - 1 { start+chuck_size } else { filesize };
+        (start, end)
+    });
+    i.collect()
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     std::env::set_var("RUST_LOG", "trace");
@@ -57,7 +67,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let ua = user_agent.random()?;
     let (tot, name) = total("https://httpbin.org/get", ua.clone(), client.clone()).await?;
     match tot{
-        Some(t) => println!("{}", t),
+        Some(t) => println!("{:#?} tot:{}", split(t, 10).await, t),
         None => ()
     }
     match name{
