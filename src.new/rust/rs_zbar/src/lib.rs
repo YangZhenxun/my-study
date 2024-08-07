@@ -39,32 +39,31 @@
  *
  * these interfaces wrap all library functionality into an easy-to-use
  * package for a specific toolkit:
- * - the "GTK+ 2.x widget" may be used with GTK GUI applications.  a
- *   Python wrapper is included for PyGtk
+ * - the "GTK+ 2.x widget" may be used with GTK GUI applications.
  * - the @ref zbar::QZBar "Qt4 widget" may be used with Qt GUI
  *   applications
  * - the Processor interface (in @ref c-processor "C" or @ref
- *   zbar::Processor "C++") adds a scanning window to an application
+ *   zbar::Processor "Rust") adds a scanning window to an application
  *   with no GUI.
  *
  * @section mid-level Intermediate Interfaces
  *
  * building blocks used to construct high-level interfaces:
  * - the ImageScanner (in @ref c-imagescanner "C" or @ref
- *   zbar::ImageScanner "C++") looks for barcodes in a library defined
+ *   zbar::ImageScanner "Rust") looks for barcodes in a library defined
  *   image object
  * - the Window abstraction (in @ref c-window "C" or @ref
- *   zbar::Window "C++") sinks library images, displaying them on the
+ *   zbar::Window "Rust") sinks library images, displaying them on the
  *   platform display
  * - the Video abstraction (in @ref c-video "C" or @ref zbar::Video
- *   "C++") sources library images from a video device
+ *   "Rust") sources library images from a video device
  *
  * @section low-level Low-Level Interfaces
  *
  * direct interaction with barcode scanning and decoding:
- * - the Scanner (in @ref c-scanner "C" or @ref zbar::Scanner "C++")
+ * - the Scanner (in @ref c-scanner "C" or @ref zbar::Scanner "Rust")
  *   looks for barcodes in a linear intensity sample stream
- * - the Decoder (in @ref c-decoder "C" or @ref zbar::Decoder "C++")
+ * - the Decoder (in @ref c-decoder "C" or @ref zbar::Decoder "Rust")
  *   extracts barcodes from a stream of bar and space widths
  */
 
@@ -72,10 +71,11 @@
 /*@{*/
 
 extern crate libc;
+use std::ops::BitAnd;
+
 use libc::{c_char, c_float, c_int, c_uint, c_ulong, c_ulonglong, c_void};
 
 /** "color" of element: bar or space. */
-#[repr(C)]
 pub enum zbar_color_e{
     /**< light area or space between bars */    ZBAR_SPACE = 0,
     /**< dark area or colored bar segment */    ZBAR_BAR = 1,
@@ -85,7 +85,6 @@ pub type zbar_color_t = zbar_color_e;
 
 
 /** decoded symbol type. */
-#[repr(C)]
 pub enum zbar_symbol_type_e {
     /**< no symbol decoded */                   ZBAR_NONE        =      0,
     /**< intermediate status */                 ZBAR_PARTIAL     =      1,
@@ -135,13 +134,369 @@ pub enum zbar_symbol_type_e {
      */
     ZBAR_ADDON       = 0x0700,
 }
+
+impl BitAnd for zbar_symbol_type_e{
+    type Output = i64;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        match self {
+            Self::ZBAR_NONE => {
+                match rhs{
+                    Self::ZBAR_NONE => 0 & 0,
+                    Self::ZBAR_PARTIAL => 0 & 1,
+                    Self::ZBAR_EAN2 => 0 & 2,
+                    Self::ZBAR_EAN5 => 0 & 5,
+                    Self::ZBAR_EAN8 => 0 & 8,
+                    Self::ZBAR_UPCE => 0 & 9,
+                    Self::ZBAR_ISBN10 => 0 & 10,
+                    Self::ZBAR_UPCA => 0 & 12,
+                    Self::ZBAR_EAN13 => 0 & 13,
+                    Self::ZBAR_ISBN13 => 0 & 14,
+                    Self::ZBAR_COMPOSITE => 0 & 15,
+                    Self::ZBAR_I25 => 0 & 25,
+                    Self::ZBAR_DATABAR => 0 & 34,
+                    Self::ZBAR_DATABAR_EXP => 0 & 35,
+                    Self::ZBAR_CODABAR => 0 & 38,
+                    Self::ZBAR_CODE39 => 0 & 39,
+                    Self::ZBAR_PDF417 => 0 & 57,
+                    Self::ZBAR_QRCODE => 0 & 64,
+                    Self::ZBAR_SQCODE => 0 & 80,
+                    Self::ZBAR_CODE93 => 0 & 93,
+                    Self::ZBAR_CODE128 => 0 & 128,
+                    Self::ZBAR_SYMBOL => 0 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 0 & 0x0200,
+                    Self::ZBAR_ADDON5 => 0 & 0x0500,
+                    Self::ZBAR_ADDON => 0 & 0x0700,
+                }
+            },
+            Self::ZBAR_PARTIAL => {
+                match rhs{
+                    Self::ZBAR_NONE => 1 & 0,
+                    Self::ZBAR_PARTIAL => 1 & 1,
+                    Self::ZBAR_EAN2 => 1 & 2,
+                    Self::ZBAR_EAN5 => 1 & 5,
+                    Self::ZBAR_EAN8 => 1 & 8,
+                    Self::ZBAR_UPCE => 1 & 9,
+                    Self::ZBAR_ISBN10 => 1 & 10,
+                    Self::ZBAR_UPCA => 1 & 12,
+                    Self::ZBAR_EAN13 => 1 & 13,
+                    Self::ZBAR_ISBN13 => 1 & 14,
+                    Self::ZBAR_COMPOSITE => 1 & 15,
+                    Self::ZBAR_I25 => 1 & 25,
+                    Self::ZBAR_DATABAR => 1 & 34,
+                    Self::ZBAR_DATABAR_EXP => 1 & 35,
+                    Self::ZBAR_CODABAR => 1 & 38,
+                    Self::ZBAR_CODE39 => 1 & 39,
+                    Self::ZBAR_PDF417 => 1 & 57,
+                    Self::ZBAR_QRCODE => 1 & 64,
+                    Self::ZBAR_SQCODE => 1 & 80,
+                    Self::ZBAR_CODE93 => 1 & 93,
+                    Self::ZBAR_CODE128 => 1 & 128,
+                    Self::ZBAR_SYMBOL => 1 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 1 & 0x0200,
+                    Self::ZBAR_ADDON5 => 1 & 0x0500,
+                    Self::ZBAR_ADDON => 1 & 0x0700,
+                }
+            },
+            Self::ZBAR_EAN2 => {
+                match rhs{
+                    Self::ZBAR_NONE => 2 & 0,
+                    Self::ZBAR_PARTIAL => 2 & 1,
+                    Self::ZBAR_EAN2 => 2 & 2,
+                    Self::ZBAR_EAN5 => 2 & 5,
+                    Self::ZBAR_EAN8 => 2 & 8,
+                    Self::ZBAR_UPCE => 2 & 9,
+                    Self::ZBAR_ISBN10 => 2 & 10,
+                    Self::ZBAR_UPCA => 2 & 12,
+                    Self::ZBAR_EAN13 => 2 & 13,
+                    Self::ZBAR_ISBN13 => 2 & 14,
+                    Self::ZBAR_COMPOSITE => 2 & 15,
+                    Self::ZBAR_I25 => 2 & 25,
+                    Self::ZBAR_DATABAR => 2 & 34,
+                    Self::ZBAR_DATABAR_EXP => 2 & 35,
+                    Self::ZBAR_CODABAR => 2 & 38,
+                    Self::ZBAR_CODE39 => 2 & 39,
+                    Self::ZBAR_PDF417 => 2 & 57,
+                    Self::ZBAR_QRCODE => 2 & 64,
+                    Self::ZBAR_SQCODE => 2 & 80,
+                    Self::ZBAR_CODE93 => 2 & 93,
+                    Self::ZBAR_CODE128 => 2 & 128,
+                    Self::ZBAR_SYMBOL => 2 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 2 & 0x0200,
+                    Self::ZBAR_ADDON5 => 2 & 0x0500,
+                    Self::ZBAR_ADDON => 2 & 0x0700,
+                }
+            },
+            Self::ZBAR_EAN5 => {
+                match rhs{
+                    Self::ZBAR_NONE => 5 & 0,
+                    Self::ZBAR_PARTIAL => 5 & 1,
+                    Self::ZBAR_EAN2 => 5 & 2,
+                    Self::ZBAR_EAN5 => 5 & 5,
+                    Self::ZBAR_EAN8 => 5 & 8,
+                    Self::ZBAR_UPCE => 5 & 9,
+                    Self::ZBAR_ISBN10 => 5 & 10,
+                    Self::ZBAR_UPCA => 5 & 12,
+                    Self::ZBAR_EAN13 => 5 & 13,
+                    Self::ZBAR_ISBN13 => 5 & 14,
+                    Self::ZBAR_COMPOSITE => 5 & 15,
+                    Self::ZBAR_I25 => 5 & 25,
+                    Self::ZBAR_DATABAR => 5 & 34,
+                    Self::ZBAR_DATABAR_EXP => 5 & 35,
+                    Self::ZBAR_CODABAR => 5 & 38,
+                    Self::ZBAR_CODE39 => 5 & 39,
+                    Self::ZBAR_PDF417 => 5 & 57,
+                    Self::ZBAR_QRCODE => 5 & 64,
+                    Self::ZBAR_SQCODE => 5 & 80,
+                    Self::ZBAR_CODE93 => 5 & 93,
+                    Self::ZBAR_CODE128 => 5 & 128,
+                    Self::ZBAR_SYMBOL => 5 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 5 & 0x0200,
+                    Self::ZBAR_ADDON5 => 5 & 0x0500,
+                    Self::ZBAR_ADDON => 5 & 0x0700,
+                }
+            },
+            Self::ZBAR_EAN8 => {
+                match rhs{
+                    Self::ZBAR_NONE => 8 & 0,
+                    Self::ZBAR_PARTIAL => 8 & 1,
+                    Self::ZBAR_EAN2 => 8 & 2,
+                    Self::ZBAR_EAN5 => 8 & 5,
+                    Self::ZBAR_EAN8 => 8 & 8,
+                    Self::ZBAR_UPCE => 8 & 9,
+                    Self::ZBAR_ISBN10 => 8 & 10,
+                    Self::ZBAR_UPCA => 8 & 12,
+                    Self::ZBAR_EAN13 => 8 & 13,
+                    Self::ZBAR_ISBN13 => 8 & 14,
+                    Self::ZBAR_COMPOSITE => 8 & 15,
+                    Self::ZBAR_I25 => 8 & 25,
+                    Self::ZBAR_DATABAR => 8 & 34,
+                    Self::ZBAR_DATABAR_EXP => 8 & 35,
+                    Self::ZBAR_CODABAR => 8 & 38,
+                    Self::ZBAR_CODE39 => 8 & 39,
+                    Self::ZBAR_PDF417 => 8 & 57,
+                    Self::ZBAR_QRCODE => 8 & 64,
+                    Self::ZBAR_SQCODE => 8 & 80,
+                    Self::ZBAR_CODE93 => 8 & 93,
+                    Self::ZBAR_CODE128 => 8 & 128,
+                    Self::ZBAR_SYMBOL => 8 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 8 & 0x0200,
+                    Self::ZBAR_ADDON5 => 8 & 0x0500,
+                    Self::ZBAR_ADDON => 8 & 0x0700,
+                }
+            },
+            Self::ZBAR_UPCE => {
+                match rhs{
+                    Self::ZBAR_NONE => 9 & 0,
+                    Self::ZBAR_PARTIAL => 9 & 1,
+                    Self::ZBAR_EAN2 => 9 & 2,
+                    Self::ZBAR_EAN5 => 9 & 5,
+                    Self::ZBAR_EAN8 => 9 & 8,
+                    Self::ZBAR_UPCE => 9 & 9,
+                    Self::ZBAR_ISBN10 => 9 & 10,
+                    Self::ZBAR_UPCA => 9 & 12,
+                    Self::ZBAR_EAN13 => 9 & 13,
+                    Self::ZBAR_ISBN13 => 9 & 14,
+                    Self::ZBAR_COMPOSITE => 9 & 15,
+                    Self::ZBAR_I25 => 9 & 25,
+                    Self::ZBAR_DATABAR => 9 & 34,
+                    Self::ZBAR_DATABAR_EXP => 9 & 35,
+                    Self::ZBAR_CODABAR => 9 & 38,
+                    Self::ZBAR_CODE39 => 9 & 39,
+                    Self::ZBAR_PDF417 => 9 & 57,
+                    Self::ZBAR_QRCODE => 9 & 64,
+                    Self::ZBAR_SQCODE => 9 & 80,
+                    Self::ZBAR_CODE93 => 9 & 93,
+                    Self::ZBAR_CODE128 => 9 & 128,
+                    Self::ZBAR_SYMBOL => 9 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 9 & 0x0200,
+                    Self::ZBAR_ADDON5 => 9 & 0x0500,
+                    Self::ZBAR_ADDON => 9 & 0x0700,
+                }
+            },
+            Self::ZBAR_ISBN10 => {
+                match rhs{
+                    Self::ZBAR_NONE => 10 & 0,
+                    Self::ZBAR_PARTIAL => 10 & 1,
+                    Self::ZBAR_EAN2 => 10 & 2,
+                    Self::ZBAR_EAN5 => 10 & 5,
+                    Self::ZBAR_EAN8 => 10 & 8,
+                    Self::ZBAR_UPCE => 10 & 9,
+                    Self::ZBAR_ISBN10 => 10 & 10,
+                    Self::ZBAR_UPCA => 10 & 12,
+                    Self::ZBAR_EAN13 => 10 & 13,
+                    Self::ZBAR_ISBN13 => 10 & 14,
+                    Self::ZBAR_COMPOSITE => 10 & 15,
+                    Self::ZBAR_I25 => 10 & 25,
+                    Self::ZBAR_DATABAR => 10 & 34,
+                    Self::ZBAR_DATABAR_EXP => 10 & 35,
+                    Self::ZBAR_CODABAR => 10 & 38,
+                    Self::ZBAR_CODE39 => 10 & 39,
+                    Self::ZBAR_PDF417 => 10 & 57,
+                    Self::ZBAR_QRCODE => 10 & 64,
+                    Self::ZBAR_SQCODE => 10 & 80,
+                    Self::ZBAR_CODE93 => 10 & 93,
+                    Self::ZBAR_CODE128 => 10 & 128,
+                    Self::ZBAR_SYMBOL => 10 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 10 & 0x0200,
+                    Self::ZBAR_ADDON5 => 10 & 0x0500,
+                    Self::ZBAR_ADDON => 10 & 0x0700,
+                }
+            },
+            Self::ZBAR_UPCA => {
+                match rhs{
+                    Self::ZBAR_NONE => 12 & 0,
+                    Self::ZBAR_PARTIAL => 12 & 1,
+                    Self::ZBAR_EAN2 => 12 & 2,
+                    Self::ZBAR_EAN5 => 12 & 5,
+                    Self::ZBAR_EAN8 => 12 & 8,
+                    Self::ZBAR_UPCE => 12 & 9,
+                    Self::ZBAR_ISBN10 => 12 & 10,
+                    Self::ZBAR_UPCA => 12 & 12,
+                    Self::ZBAR_EAN13 => 12 & 13,
+                    Self::ZBAR_ISBN13 => 12 & 14,
+                    Self::ZBAR_COMPOSITE => 12 & 15,
+                    Self::ZBAR_I25 => 12 & 25,
+                    Self::ZBAR_DATABAR => 12 & 34,
+                    Self::ZBAR_DATABAR_EXP => 12 & 35,
+                    Self::ZBAR_CODABAR => 12 & 38,
+                    Self::ZBAR_CODE39 => 12 & 39,
+                    Self::ZBAR_PDF417 => 12 & 57,
+                    Self::ZBAR_QRCODE => 12 & 64,
+                    Self::ZBAR_SQCODE => 12 & 80,
+                    Self::ZBAR_CODE93 => 12 & 93,
+                    Self::ZBAR_CODE128 => 12 & 128,
+                    Self::ZBAR_SYMBOL => 12 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 12 & 0x0200,
+                    Self::ZBAR_ADDON5 => 12 & 0x0500,
+                    Self::ZBAR_ADDON => 12 & 0x0700,
+                }
+            },
+            Self::ZBAR_EAN13 => {
+                match rhs{
+                    Self::ZBAR_NONE => 13 & 0,
+                    Self::ZBAR_PARTIAL => 13 & 1,
+                    Self::ZBAR_EAN2 => 13 & 2,
+                    Self::ZBAR_EAN5 => 13 & 5,
+                    Self::ZBAR_EAN8 => 13 & 8,
+                    Self::ZBAR_UPCE => 13 & 9,
+                    Self::ZBAR_ISBN10 => 13 & 10,
+                    Self::ZBAR_UPCA => 13 & 12,
+                    Self::ZBAR_EAN13 => 13 & 13,
+                    Self::ZBAR_ISBN13 => 13 & 14,
+                    Self::ZBAR_COMPOSITE => 13 & 15,
+                    Self::ZBAR_I25 => 13 & 25,
+                    Self::ZBAR_DATABAR => 13 & 34,
+                    Self::ZBAR_DATABAR_EXP => 13 & 35,
+                    Self::ZBAR_CODABAR => 13 & 38,
+                    Self::ZBAR_CODE39 => 13 & 39,
+                    Self::ZBAR_PDF417 => 13 & 57,
+                    Self::ZBAR_QRCODE => 13 & 64,
+                    Self::ZBAR_SQCODE => 13 & 80,
+                    Self::ZBAR_CODE93 => 13 & 93,
+                    Self::ZBAR_CODE128 => 13 & 128,
+                    Self::ZBAR_SYMBOL => 13 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 13 & 0x0200,
+                    Self::ZBAR_ADDON5 => 13 & 0x0500,
+                    Self::ZBAR_ADDON => 13 & 0x0700,
+                }
+            },Self::ZBAR_ISBN13 => {
+                match rhs{
+                    Self::ZBAR_NONE => 14 & 0,
+                    Self::ZBAR_PARTIAL => 14 & 1,
+                    Self::ZBAR_EAN2 => 14 & 2,
+                    Self::ZBAR_EAN5 => 14 & 5,
+                    Self::ZBAR_EAN8 => 14 & 8,
+                    Self::ZBAR_UPCE => 14 & 9,
+                    Self::ZBAR_ISBN10 => 14 & 10,
+                    Self::ZBAR_UPCA => 14 & 12,
+                    Self::ZBAR_EAN13 => 14 & 13,
+                    Self::ZBAR_ISBN13 => 14 & 14,
+                    Self::ZBAR_COMPOSITE => 14 & 15,
+                    Self::ZBAR_I25 => 14 & 25,
+                    Self::ZBAR_DATABAR => 14 & 34,
+                    Self::ZBAR_DATABAR_EXP => 14 & 35,
+                    Self::ZBAR_CODABAR => 14 & 38,
+                    Self::ZBAR_CODE39 => 14 & 39,
+                    Self::ZBAR_PDF417 => 14 & 57,
+                    Self::ZBAR_QRCODE => 14 & 64,
+                    Self::ZBAR_SQCODE => 14 & 80,
+                    Self::ZBAR_CODE93 => 14 & 93,
+                    Self::ZBAR_CODE128 => 14 & 128,
+                    Self::ZBAR_SYMBOL => 14 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 14 & 0x0200,
+                    Self::ZBAR_ADDON5 => 14 & 0x0500,
+                    Self::ZBAR_ADDON => 14 & 0x0700,
+                }
+            },
+            Self::ZBAR_COMPOSITE => {
+                match rhs{
+                    Self::ZBAR_NONE => 15 & 0,
+                    Self::ZBAR_PARTIAL => 15 & 1,
+                    Self::ZBAR_EAN2 => 15 & 2,
+                    Self::ZBAR_EAN5 => 15 & 5,
+                    Self::ZBAR_EAN8 => 15 & 8,
+                    Self::ZBAR_UPCE => 15 & 9,
+                    Self::ZBAR_ISBN10 => 15 & 10,
+                    Self::ZBAR_UPCA => 15 & 12,
+                    Self::ZBAR_EAN13 => 15 & 13,
+                    Self::ZBAR_ISBN13 => 15 & 14,
+                    Self::ZBAR_COMPOSITE => 15 & 15,
+                    Self::ZBAR_I25 => 15 & 25,
+                    Self::ZBAR_DATABAR => 15 & 34,
+                    Self::ZBAR_DATABAR_EXP => 15 & 35,
+                    Self::ZBAR_CODABAR => 15 & 38,
+                    Self::ZBAR_CODE39 => 15 & 39,
+                    Self::ZBAR_PDF417 => 15 & 57,
+                    Self::ZBAR_QRCODE => 15 & 64,
+                    Self::ZBAR_SQCODE => 15 & 80,
+                    Self::ZBAR_CODE93 => 15 & 93,
+                    Self::ZBAR_CODE128 => 15 & 128,
+                    Self::ZBAR_SYMBOL => 15 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 15 & 0x0200,
+                    Self::ZBAR_ADDON5 => 15 & 0x0500,
+                    Self::ZBAR_ADDON => 15 & 0x0700,
+                }
+            },
+            Self::ZBAR_I25 => {
+                match rhs{
+                    Self::ZBAR_NONE => 25 & 0,
+                    Self::ZBAR_PARTIAL => 25 & 1,
+                    Self::ZBAR_EAN2 => 25 & 2,
+                    Self::ZBAR_EAN5 => 25 & 5,
+                    Self::ZBAR_EAN8 => 25 & 8,
+                    Self::ZBAR_UPCE => 25 & 9,
+                    Self::ZBAR_ISBN10 => 25 & 10,
+                    Self::ZBAR_UPCA => 25 & 12,
+                    Self::ZBAR_EAN13 => 25 & 13,
+                    Self::ZBAR_ISBN13 => 25 & 14,
+                    Self::ZBAR_COMPOSITE => 25 & 15,
+                    Self::ZBAR_I25 => 25 & 25,
+                    Self::ZBAR_DATABAR => 25 & 34,
+                    Self::ZBAR_DATABAR_EXP => 25 & 35,
+                    Self::ZBAR_CODABAR => 25 & 38,
+                    Self::ZBAR_CODE39 => 25 & 39,
+                    Self::ZBAR_PDF417 => 25 & 57,
+                    Self::ZBAR_QRCODE => 25 & 64,
+                    Self::ZBAR_SQCODE => 25 & 80,
+                    Self::ZBAR_CODE93 => 25 & 93,
+                    Self::ZBAR_CODE128 => 25 & 128,
+                    Self::ZBAR_SYMBOL => 25 & 0x00ff,
+                    Self::ZBAR_ADDON2 => 25 & 0x0200,
+                    Self::ZBAR_ADDON5 => 25 & 0x0500,
+                    Self::ZBAR_ADDON => 25 & 0x0700,
+                }
+            },
+        }
+    }
+}
+
 #[doc = " decoded symbol type. "]
 pub type zbar_symbol_type_t = zbar_symbol_type_e;
 
 /** decoded symbol coarse orientation.
  * @since 0.11
  */
-#[repr(C)]
 pub enum zbar_orientation_e {
     /**< unable to determine orientation */    ZBAR_ORIENT_UNKNOWN = -1,
     /**< upright, read left to right */        ZBAR_ORIENT_UP,
@@ -153,7 +508,6 @@ pub enum zbar_orientation_e {
 pub type zbar_orientation_t = zbar_orientation_e;
 
 /** error codes. */
-#[repr(C)]
 pub enum zbar_error_e {
     /**< no error */                ZBAR_OK = 0,
     /**< out of memory */           ZBAR_ERR_NOMEM,
@@ -175,7 +529,6 @@ pub type zbar_error_t = zbar_error_e;
 /** decoder configuration options.
  * @since 0.4
  */
-#[repr(C)]
 pub enum zbar_config_e {
     /**< enable symbology/feature */                ZBAR_CFG_ENABLE = 0,
     /**< enable check digit when optional */        ZBAR_CFG_ADD_CHECK,
@@ -201,7 +554,6 @@ pub type zbar_config_t = zbar_config_e;
 /** decoder symbology modifier flags.
  * @since 0.11
  */
-#[repr(C)]
 pub enum zbar_modifier_e {
     /** barcode tagged as GS1 (EAN.UCC) reserved
      * (eg, FNC1 before first data character).
@@ -220,7 +572,6 @@ pub enum zbar_modifier_e {
 #[doc = "decoder symbology modifier flags.\n* @since 0.11"]
 pub type zbar_modifier_t = zbar_modifier_e;
 
-#[repr(C)]
 pub enum video_control_type_e {
     VIDEO_CNTL_INTEGER = 1,
     VIDEO_CNTL_MENU,
@@ -235,9 +586,8 @@ pub type video_control_type_t = video_control_type_e;
  * `name` name of the menu item
  * `val` integer value associated with the item
  */
-#[repr(C)]
 pub struct video_control_menu_e {
-    name: *mut c_char,
+    name: String,
     value: i64
 }
 #[doc = "store video control menu\n* `name` name of the menu item\n* `val` integer value associated with the item"]
@@ -255,10 +605,9 @@ pub type video_control_menu_t = video_control_menu_e;
  * `menu_size` menu size
  * @since 0.20
  */
-#[repr(C)]
 pub struct video_controls_s {
-    name: *mut c_char,
-    group: *mut c_char,
+    name: String,
+    group: String,
     _type: video_control_type_t,
     min: i64,
     max: i64,
@@ -267,7 +616,7 @@ pub struct video_controls_s {
     menu_size: u32,
     menu: video_control_menu_t,
     // video drivers may add extra private data in the end of this struct
-    next: *mut c_void
+    next: Box<dyn std::any::Any>
 }
 #[doc = "store video controls\n * `name` name of the control\n * `group` name of the control group/class\n * `_type` type of the control\n * `min` minimum value of control (if control is integer)\n * `max` maximum value of control (if control is integer)\n * `def` default value of control (if control is integer)\n * `step` increment steps (if control is intege)r\n * `menu` menu array\n * `menu_size` menu size\n * @since 0.20"]
 pub type video_controls_t = video_controls_s;
@@ -278,7 +627,6 @@ pub type video_controls_t = video_controls_s;
  * `max_fps` maximum streaming speed, in frames per second
  * @since 0.22
  */
-#[repr(C)]
 pub struct video_resolution_s {
     width: u32,
     height: u32,
@@ -328,16 +676,7 @@ extern {
         orientation: zbar_orientation_t,
     ) -> *const c_char;
 }
-#[link(name="zbar")]
-extern {
-    #[doc = " parse a configuration string of the form \"[symbology.]config[=value]\".\n the config must match one of the recognized names.\n the symbology, if present, must match one of the recognized names.\n if symbology is unspecified, it will be set to 0.\n if value is unspecified it will be set to 1.\n returns 0 if the config is parsed successfully, 1 otherwise\n @since 0.4"]
-    pub fn zbar_parse_config(
-        config_string: *const c_char,
-        symbology: *mut zbar_symbol_type_t,
-        config: *mut zbar_config_t,
-        value: *mut c_int,
-    ) -> c_int;
-}
+
 
 #[doc = "consistently compute fourcc values across architectures\n * (adapted from v4l2 specification)\n * @since 0.11"]
 #[macro_export]
@@ -1338,7 +1677,9 @@ extern "C" {
 pub mod Exception;
 pub mod Decoder;
 pub mod cxx_std_need;
+pub mod src;
 #[cfg(test)]
 mod tests;
 pub use Exception::*;
 pub use Decoder::*;
+pub use src::*;
