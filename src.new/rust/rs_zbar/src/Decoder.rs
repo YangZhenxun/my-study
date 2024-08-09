@@ -47,51 +47,33 @@ pub trait config_all {
 
 impl Decoder {
     pub fn new() -> Decoder {
-        unsafe{
-            let handler = crate::cxx_std_need::Null{};
-            let decoder = zbar_decoder_create();
-            Decoder { _decoder: decoder, _handler: _All::Non(handler)}
-        }
+        let handler = crate::cxx_std_need::Null{};
+        let decoder = zbar_decoder_create();
+        Decoder { _decoder: decoder, _handler: _All::Non(handler)}
     }
     pub fn reset(&self){
-        unsafe {
-            zbar_decoder_reset(self._decoder)
-        }
+        zbar_decoder_reset(self._decoder)
     }
     pub fn new_scan(&self){
-        unsafe {
-            zbar_decoder_new_scan(self._decoder)
-        }
+        zbar_decoder_new_scan(self._decoder)
     }
     pub fn decode_width(&self, width: c_uint) -> zbar_symbol_type_t{
-        unsafe{
-            return zbar_decode_width(self._decoder, width)
-        }
+        zbar_decode_width(self._decoder, width)
     }
     pub fn get_color(&self) -> zbar_color_t{
-        unsafe {
-            return zbar_decoder_get_color(self._decoder)
-        }
+        zbar_decoder_get_color(self._decoder)
     }
     pub fn get_type(&self) -> zbar_symbol_type_t{
-        unsafe {
-            return zbar_decoder_get_type(self._decoder)
-        }
+        zbar_decoder_get_type(self._decoder)
     }
     pub fn get_symbol_name(&self) -> *const c_char {
-        unsafe{
-            return zbar_get_addon_name(zbar_decoder_get_type(self._decoder));
-        }
+        bar_get_addon_name(zbar_decoder_get_type(self._decoder))
     }
     pub fn get_addon_name(&self) -> *const c_char {
-        unsafe {
-            return zbar_get_addon_name(zbar_decoder_get_type(self._decoder));
-        }
+        zbar_get_addon_name(zbar_decoder_get_type(self._decoder))
     }
     pub fn get_data_chars(&self) -> *const c_char {
-        unsafe {
-            return zbar_decoder_get_data(self._decoder)
-        }
+        zbar_decoder_get_data(self._decoder)
     }
     pub fn get_data_string(&self)  -> Result<String, std::str::Utf8Error>{
         unsafe {
