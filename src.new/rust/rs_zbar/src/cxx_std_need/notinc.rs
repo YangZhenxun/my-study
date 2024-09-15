@@ -8,7 +8,12 @@ pub struct CStrPtr{
 
 impl Add<i64> for CStrPtr{
     type Output = Self;
-    fn add(self, rhs: i64) -> Self::Output {
+    fn add(mut self, rhs: i64) -> Self::Output {
+        if (self.offset+rhs) as usize > self.string.len() {
+            for _ in 1..=((self.offset+rhs) as usize-self.string.len()){
+                self.string += " ";
+            }
+        }
         for (u, _c) in self.string.chars().enumerate(){
             if u == (self.offset+rhs).try_into().expect("i64 into usize err") {
                 return Self{string: self.string, offset: self.offset+rhs};
@@ -69,6 +74,18 @@ impl CStrPtr{
     }
     pub fn to_i64(&self) -> i64 {
         self.offset
+    }
+    pub fn point_at(&mut self, who: char) {
+        let mut string = String::new();
+        for (u, c) in self.string.chars().enumerate(){
+            if u != self.offset as usize{
+                string.push(c);
+            }
+            else {
+                string.push(who);
+            }
+        }
+        self.string = string;
     }
 }
 

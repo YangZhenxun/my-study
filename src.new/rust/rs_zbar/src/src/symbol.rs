@@ -1,4 +1,5 @@
 use crate::*;
+use cxx_std_need::CStrPtr;
 use zbar_symbol_type_e::*;
 use zbar_config_e::*;
 
@@ -26,13 +27,13 @@ pub struct zbar_symbol_s {
     pub _type: zbar_symbol_type_t,
     pub configs: u64,
     pub modifiers: u64,
-    pub data_alloc: Option<u64>,
+    pub data_alloc: u64,
     pub datalen: u64,
     pub data: Option<String>,
 
     pub pts_alloc: u64,
     pub npts: u64,
-    pub pts: Option<point_t>,
+    pub pts: Vec<point_t>,
     pub orient: zbar_orientation_t,
 
     pub refcnt: refcnt_t,
@@ -146,15 +147,152 @@ pub fn _zbar_symbol_free(mut sym: zbar_symbol_t)
         zbar_symbol_set_ref(syms, -1);
         sym.syms = None
     }
-    if let Some(pts) = sym.pts {
-        drop(pts);
+    if ! sym.pts.is_empty(){
+        drop(&sym.pts);
     }
     if let Some(ref data) = sym.data {
-        if sym.data_alloc != None{
+        if sym.data_alloc != 0{
             drop(data)
         }
     }
     drop(sym);
+}
+
+pub fn zbar_symbol_ref(sym: zbar_symbol_t, refs: i32){
+    _zbar_symbol_refcnt(sym, refs);
+}
+
+pub fn zbar_symbol_get_type(sym: zbar_symbol_t) -> zbar_symbol_type_t{
+    sym._type
+}
+
+pub fn zbar_symbol_get_configs(sym: zbar_symbol_t) -> u64{
+    sym.configs
+}
+
+pub fn zbar_symbol_get_modifiers(sym: zbar_symbol_t) -> u64{
+    sym.modifiers
+}
+
+pub fn zbar_symbol_get_data(sym: zbar_symbol_t) -> Option<String>{
+    sym.data
+}
+
+pub fn zbar_symbol_get_data_length(sym: zbar_symbol_t)  -> u64 {
+    sym.datalen
+}
+
+pub fn zbar_symbol_get_count(sym: zbar_symbol_t) -> i64{
+    sym.cache_count
+}
+
+pub fn zbar_symbol_get_quality(sym: zbar_symbol_t) -> i64{
+    sym.quality
+}
+
+pub fn zbar_symbol_get_loc_size(sym: zbar_symbol_t) -> u64 {
+    sym.npts
+}
+
+pub fn zbar_symbol_get_loc_x(sym: zbar_symbol_t, idx: u64) -> i64{
+    if idx < sym.npts{
+        sym.pts[idx as usize].x
+    } else {
+        -1
+    }
+}
+
+pub fn zbar_symbol_get_loc_y(sym: zbar_symbol_t, idx: u64) -> i64{
+    if idx < sym.npts{
+        sym.pts[idx as usize].y
+    } else {
+        -1
+    }
+}
+
+pub fn zbar_symbol_get_orientation(sym: zbar_symbol_t) -> zbar_orientation_t{
+    sym.orient
+}
+
+pub fn zbar_symbol_next(sym: zbar_symbol_t) -> Option<zbar_symbol_t>{
+    if let Some(next) = sym.next{Some(*next)} else {None}
+}
+
+pub fn zbar_symbol_get_components(sym: zbar_symbol_t)-> Option<zbar_symbol_set_s>{
+    sym.syms
+}
+
+pub fn zbar_symbol_first_component(sym: zbar_symbol_t)->Option<zbar_symbol_t>{
+    if let Some(syms) = sym.syms{
+        if let Some(head) = syms.head{
+            Some(*head)
+        } else {
+            None
+        }
+    } else {None}
+}
+
+pub fn base64_encode(dst: String, mut src: i64, mut srclen: u64) -> u64{
+    let alphabet = 
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let start = dst.clone();
+    let mut dst = CStrPtr::new(dst, 0);
+    let mut nline = 19;
+    loop{
+        src += 1;
+        let mut buf = src << 16;
+        if srclen > 1{
+            src += 1;
+            buf |= src << 8;
+        }
+        if srclen > 2 {
+            src += 1;
+            buf |= src;
+        }
+        dst += 1;
+        for (u, a) in alphabet.chars().enumerate(){
+            if u == ((buf >> 18) & 0x3f) as usize{
+                dst.point_at(a)
+            }
+        }
+        dst += 1;
+        for (u, a) in alphabet.chars().enumerate(){
+            if u == ((buf >> 12) & 0x3f) as usize{
+                dst.point_at(a)
+            }
+        }
+        dst += 1;
+        if srclen > 1{
+            for (u, a) in alphabet.chars().enumerate(){
+                if u == ((buf >> 6) & 0x3f) as usize{
+                    dst.point_at(a)
+                }
+            }
+        } else {
+            dst.point_at('=')
+        }
+        dst += 1;
+        if srclen > 2{
+            for (u, a) in alphabet.chars().enumerate(){
+                if u == (buf & 0x3f) as usize{
+                    dst.point_at(a)
+                }
+            }
+        } else {
+            dst.point_at('=')
+        }
+        if srclen < 3{break;}
+        nline -= 1;
+        if nline == 0{
+            dst += 1;
+            dst.point_at('\n');
+            nline = 19;
+        }
+        srclen -= 3;
+    }
+    dst += 1;
+    dst.point_at('\n');
+    (dst - start - 1) as u64
 }
 
 #[inline]
