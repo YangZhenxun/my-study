@@ -1,0 +1,40 @@
+; hello-os
+; TAB=4
+; System:FAT-12
+
+DB  0xeb, 0x4e, 0x90, 
+DB "HELLOIPL" ; system entry's name
+DW 512 ; every chuck's size( 512Bytes )
+DB 1 ; cluster's size( one chuck )
+DW 1 ; FAT starts here
+DB 2 ; 2 FATs
+DW 224 ; the size of root directory
+DW 2280 ; the size of the system directory
+DB 0xf0 ; the kind of the system directory
+DW 9 ; FAT's length
+DW 18 ; track 's length(?)
+DW 2 ; 2 tracks
+DD 0 ; no split spaces
+DD 2880 ; remote the length of the system directory
+DB  0,0,0x29 ; Unknown, put here
+DD 0xffffffff ; (may be)number of the system directory
+DB "HELLO-OS   " ; name of the system directory(11 bytes)
+DB "FAT12   " ; name of the system directory
+RESB 18
+; main
+DB    0xb8, 0x00, 0x00, 0x8e, 0xd0, 0xbc, 0x00, 0x7c
+DB    0x8e, 0xd8, 0x8e, 0xc0, 0xbe, 0x74, 0x7c, 0x8a
+DB    0x04, 0x83, 0xc6, 0x01, 0x3c, 0x00, 0x74, 0x09
+DB    0xb4, 0x0e, 0xbb, 0x0f, 0x00, 0xcd, 0x10, 0xeb
+DB    0xee, 0xf4, 0xeb, 0xfd
+; show info        
+DB    0x0a, 0x0a      ; 2 \n        
+DB    "hello, world"        
+DB    0x0a             ; newline￼        
+DB    0
+RESB  0x1fe-($-$$)    ; write 0x00，until 0x001fe￼        
+DB    0x55, 0xaa      ; after boot        
+DB    0xf0, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00        
+RESB  4600        
+DB    0xf0, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00
+RESB  1469432

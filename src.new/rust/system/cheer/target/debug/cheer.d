@@ -1,0 +1,1 @@
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/system/cheer/target/debug/cheer: /Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/system/cheer/src/func.S /Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/system/cheer/src/main.rs

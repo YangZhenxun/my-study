@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/ld CMakeFiles/build.dir/testa.asm.o CMakeFiles/build.dir/ipl.asm.o -o build

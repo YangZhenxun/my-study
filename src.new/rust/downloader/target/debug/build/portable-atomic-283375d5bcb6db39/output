@@ -1,0 +1,6 @@
+cargo:rerun-if-changed=build.rs
+cargo:rerun-if-changed=no_atomic.rs
+cargo:rerun-if-changed=version.rs
+cargo:rustc-cfg=portable_atomic_llvm_16
+cargo:rustc-cfg=portable_atomic_target_feature="lse2"
+cargo:rustc-cfg=portable_atomic_ll_sc_rmw
