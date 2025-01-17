@@ -1,0 +1,14 @@
+D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\deps\libclang_sys-0bca20b3d29ca8c8.rmeta: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\support.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\link.rs D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/macros.rs D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/common.rs D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/dynamic.rs
+
+D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\deps\libclang_sys-0bca20b3d29ca8c8.rlib: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\support.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\link.rs D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/macros.rs D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/common.rs D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/dynamic.rs
+
+D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\deps\clang_sys-0bca20b3d29ca8c8.d: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\support.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\link.rs D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/macros.rs D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/common.rs D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/dynamic.rs
+
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\lib.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\support.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\clang-sys-1.8.1\src\link.rs:
+D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/macros.rs:
+D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/common.rs:
+D:\其他文件\my-study--github\src.new\rust\zbar_rs\target\debug\build\clang-sys-d3e9cb76f605f7cd\out/dynamic.rs:
+
+# env-dep:OUT_DIR=D:\\其他文件\\my-study--github\\src.new\\rust\\zbar_rs\\target\\debug\\build\\clang-sys-d3e9cb76f605f7cd\\out

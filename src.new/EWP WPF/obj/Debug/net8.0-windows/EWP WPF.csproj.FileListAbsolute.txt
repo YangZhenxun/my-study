@@ -1,0 +1,25 @@
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows\EWP WPF.exe
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows\EWP WPF.deps.json
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows\EWP WPF.runtimeconfig.json
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows\EWP WPF.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows\EWP WPF.pdb
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\MainWindow.g.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\App.g.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF_MarkupCompile.cache
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF_MarkupCompile.lref
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\MainWindow.baml
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF.g.resources
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF.GeneratedMSBuildEditorConfig.editorconfig
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF.AssemblyInfoInputs.cache
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF.AssemblyInfo.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF.csproj.CoreCompileInputs.cache
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF.sourcelink.json
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\refint\EWP WPF.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF.pdb
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\EWP WPF.genruntimeconfig.cache
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\ref\EWP WPF.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\Styles.baml
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\UserControl1.g.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows\UserControl1.baml

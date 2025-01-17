@@ -1,0 +1,12 @@
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\librand_core-f741b98fa5f24718.rmeta: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\block.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\error.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\impls.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\le.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\os.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\librand_core-f741b98fa5f24718.rlib: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\block.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\error.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\impls.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\le.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\os.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\rand_core-f741b98fa5f24718.d: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\block.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\error.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\impls.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\le.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\os.rs
+
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\lib.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\block.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\error.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\impls.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\le.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\rand_core-0.6.4\src\os.rs:

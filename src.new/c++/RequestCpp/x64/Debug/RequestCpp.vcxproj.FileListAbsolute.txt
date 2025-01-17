@@ -1,0 +1,1 @@
+D:\my-study--github\src.new\c++\RequestCpp\x64\Debug\RequestCpp.lib

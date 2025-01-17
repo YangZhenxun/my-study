@@ -1,0 +1,120 @@
+﻿  _version.cpp
+D:\my-study--github\src.new\c++\UrllibCpp\_version.cpp(3,9): warning C4081: 应输入“标识符”；找到“(”
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(48,17): error C2323: “Httplib::operator new”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(55,12): error C2039: "nothrow_t": 不是 "std" 的成员
+D:\my-study--github\src.new\c++\UrllibCpp\predefined C++ types (compiler internal)(347,11): message : 参见“std”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(55,12): error C2061: 语法错误: 标识符“nothrow_t”
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(56,15): warning C5043: Httplib::operator new: 异常规范与前面的声明不匹配
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(48,17): message : 参见“Httplib::operator new”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(53,17): error C2323: “Httplib::operator new”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(59,17): error C2323: “Httplib::operator new[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(66,12): error C2039: "nothrow_t": 不是 "std" 的成员
+D:\my-study--github\src.new\c++\UrllibCpp\predefined C++ types (compiler internal)(347,11): message : 参见“std”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(66,12): error C2061: 语法错误: 标识符“nothrow_t”
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(67,15): warning C5043: Httplib::operator new[]: 异常规范与前面的声明不匹配
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(59,17): message : 参见“Httplib::operator new[]”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(64,17): error C2323: “Httplib::operator new[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(69,16): error C2323: “Httplib::operator delete”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(75,12): error C2039: "nothrow_t": 不是 "std" 的成员
+D:\my-study--github\src.new\c++\UrllibCpp\predefined C++ types (compiler internal)(347,11): message : 参见“std”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(75,12): error C2061: 语法错误: 标识符“nothrow_t”
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(73,16): error C2323: “Httplib::operator delete”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(78,16): error C2323: “Httplib::operator delete[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(84,12): error C2039: "nothrow_t": 不是 "std" 的成员
+D:\my-study--github\src.new\c++\UrllibCpp\predefined C++ types (compiler internal)(347,11): message : 参见“std”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(84,12): error C2061: 语法错误: 标识符“nothrow_t”
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(82,16): error C2323: “Httplib::operator delete[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(87,16): error C2323: “Httplib::operator delete”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(92,16): error C2323: “Httplib::operator delete[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(99,17): error C2323: “Httplib::operator new”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(108,12): error C2039: "nothrow_t": 不是 "std" 的成员
+D:\my-study--github\src.new\c++\UrllibCpp\predefined C++ types (compiler internal)(347,11): message : 参见“std”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(108,12): error C2061: 语法错误: 标识符“nothrow_t”
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(109,15): warning C5043: Httplib::operator new: 异常规范与前面的声明不匹配
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(99,17): message : 参见“Httplib::operator new”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(105,17): error C2323: “Httplib::operator new”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(113,17): error C2323: “Httplib::operator new[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(122,12): error C2039: "nothrow_t": 不是 "std" 的成员
+D:\my-study--github\src.new\c++\UrllibCpp\predefined C++ types (compiler internal)(347,11): message : 参见“std”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(122,12): error C2061: 语法错误: 标识符“nothrow_t”
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(123,15): warning C5043: Httplib::operator new[]: 异常规范与前面的声明不匹配
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(113,17): message : 参见“Httplib::operator new[]”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(119,17): error C2323: “Httplib::operator new[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(125,16): error C2323: “Httplib::operator delete”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(133,12): error C2039: "nothrow_t": 不是 "std" 的成员
+D:\my-study--github\src.new\c++\UrllibCpp\predefined C++ types (compiler internal)(347,11): message : 参见“std”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(133,12): error C2061: 语法错误: 标识符“nothrow_t”
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(130,16): error C2323: “Httplib::operator delete”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(136,16): error C2323: “Httplib::operator delete[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(144,12): error C2039: "nothrow_t": 不是 "std" 的成员
+D:\my-study--github\src.new\c++\UrllibCpp\predefined C++ types (compiler internal)(347,11): message : 参见“std”的声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(144,12): error C2061: 语法错误: 标识符“nothrow_t”
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(141,16): error C2323: “Httplib::operator delete[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(147,16): error C2323: “Httplib::operator delete”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(153,16): error C2323: “Httplib::operator delete[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(166,28): error C2323: “Httplib::operator new”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(173,27): error C2323: “Httplib::operator delete”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(182,28): error C2323: “Httplib::operator new[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new.h(189,27): error C2323: “Httplib::operator delete[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new_debug.h(26,37): error C2323: “Httplib::operator new”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new_debug.h(34,37): error C2323: “Httplib::operator new[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new_debug.h(41,20): error C2323: “Httplib::operator delete”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\vcruntime_new_debug.h(48,20): error C2323: “Httplib::operator delete[]”: 非成员运算符 new 或 delete 函数不可声明为静态的，也不可在全局命名空间之外的命名空间中进行声明
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(24,18): error C2039: "fabs": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(28,18): error C2039: "fabsf": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(32,18): error C2039: "fabsl": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(37,25): error C2039: "div_t": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(37,13): error C2873: “div_t”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(38,25): error C2039: "ldiv_t": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(38,13): error C2873: “ldiv_t”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(39,25): error C2039: "abort": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(39,13): error C2873: “abort”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(40,25): error C2039: "abs": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(40,13): error C2873: “abs”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(42,25): error C2039: "atof": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(42,13): error C2873: “atof”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(43,25): error C2039: "atoi": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(43,13): error C2873: “atoi”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(44,25): error C2039: "atol": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(44,13): error C2873: “atol”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(45,25): error C2039: "bsearch": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(45,13): error C2873: “bsearch”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(46,25): error C2039: "calloc": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(46,13): error C2873: “calloc”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(47,25): error C2039: "div": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(47,13): error C2873: “div”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(48,25): error C2039: "exit": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(48,13): error C2873: “exit”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(49,25): error C2039: "free": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(49,13): error C2873: “free”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(50,25): error C2039: "labs": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(50,13): error C2873: “labs”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(51,25): error C2039: "ldiv": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(51,13): error C2873: “ldiv”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(52,25): error C2039: "malloc": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(52,13): error C2873: “malloc”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(53,25): error C2039: "mblen": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(53,13): error C2873: “mblen”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(54,25): error C2039: "mbstowcs": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(54,13): error C2873: “mbstowcs”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(55,25): error C2039: "mbtowc": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(55,13): error C2873: “mbtowc”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(56,25): error C2039: "qsort": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(56,13): error C2873: “qsort”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(57,25): error C2039: "rand": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(57,13): error C2873: “rand”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(58,25): error C2039: "realloc": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(58,13): error C2873: “realloc”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(59,25): error C2039: "srand": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(59,13): error C2873: “srand”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(60,25): error C2039: "strtod": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(60,13): error C2873: “strtod”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(61,25): error C2039: "strtol": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(61,13): error C2873: “strtol”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(62,25): error C2039: "strtoul": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(62,13): error C2873: “strtoul”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(63,25): error C2039: "wcstombs": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(63,13): error C2873: “wcstombs”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(64,25): error C2039: "wctomb": 不是 "`global namespace'" 的成员
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(64,13): error C2873: “wctomb”: 符号不能用在 using 声明中
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include\cstdlib(64,31): fatal  error C1003: 错误计数超过 100；正在停止编译

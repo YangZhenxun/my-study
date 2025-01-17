@@ -1,0 +1,25 @@
+﻿<UserControl x:Class="EWP_WPF.UserControl1"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:EWP_WPF" d:DataContext="{d:DesignInstance Type=local:ViewModel}"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="25*"/>
+            <ColumnDefinition Width="115*"/>
+            <ColumnDefinition Width="10*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="5*"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="20*"/>
+        </Grid.RowDefinitions>
+        <TextBlock FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Grid.ColumnSpan="2">EWP Office</TextBlock>
+        <TextBox Grid.Column="2" Height="25"/>
+        <Button Grid.Column="1" Grid.Row="1" Content="{Binding Newbtn}" MaxHeight="35" MaxWidth="10000"/>
+    </Grid>
+</UserControl>

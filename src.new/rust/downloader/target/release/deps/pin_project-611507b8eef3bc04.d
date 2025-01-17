@@ -1,0 +1,7 @@
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\libpin_project-611507b8eef3bc04.rmeta: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\pin-project-1.1.5\src\lib.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\libpin_project-611507b8eef3bc04.rlib: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\pin-project-1.1.5\src\lib.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\pin_project-611507b8eef3bc04.d: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\pin-project-1.1.5\src\lib.rs
+
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\pin-project-1.1.5\src\lib.rs:

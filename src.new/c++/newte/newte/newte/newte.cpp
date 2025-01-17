@@ -2,6 +2,8 @@
 #include <random>
 #include <string>
 #include <fileapi.h>
+#include <Windows.h>
+#include <string.h>
 class Admin
 {
 public:

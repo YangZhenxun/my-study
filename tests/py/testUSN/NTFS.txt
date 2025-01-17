@@ -1,0 +1,99 @@
+NTFS文件系统的一个特性是它的可选日志。文件系统的日志通常是指记录一个时间日志文件以便在系统发生故障的时候能够恢复。（NTFS也有这个功能，但是那是指NTFS的日志特性）这里要战士另外一种日志：USN（Update seaquence Number）日志的使用
+
+USN日志记录了磁盘上所有文件和目录更新的记录，它是为了给类似备份工具这样的程序提供一种高效的方式找出一定时间内发生改变的文件。USN是指Update Sequence Number。文件系统记录的日志在两个USN之间。
+
+当然日志也有一些不足：
+1.他仅仅记录发生“原子性”改变。他会告诉你是否有个文件被打开写入过，但是他不知道写入的内容是什么，更不用说文件改变之前和之后的内容
+2.他不会记录其他的改变，比如断电，硬件故障，或者操作系统故障
+3.他只有有限的空间来记录，因此当空间用尽的时候，较先存入的日志会丢失；因此应用程序可以把他当做一个优化方式，当没有数据改变的时候必须有后备措施
+
+Journal API
+可以通过系统调用DeviceIoControl函数来操纵日志，USN在微软的MSDN上面有详细的文档介绍，这里不深入讨论。
+
+当然也可以通过python的相关平台接口来操纵它，下面的代码是使用python查询日志信息最基本的操作：
+import struct
+import win32file
+import winioctlcon
+
+def open_volume(drive):
+    volh = win32file.CreateFile('\\\\.\\' + drive, win32file.GENERIC_READ,
+            win32file.FILE_SHARE_READ | win32file.FILE_SHARE_WRITE, None,
+            win32file.OPEN_EXISTING, win32file.FILE_ATTRIBUTE_NORMAL, None)
+    return volh
+
+def close_volume(volh):
+    win32file.CloseHandle(volh)
+
+def query_journal(volh):
+    fmt = 'QQQQQQQ'
+    len = struct.calcsize(fmt)
+    buf = win32file.DeviceIoControl(volh, winioctlcon.FSCTL_QUERY_USN_JOURNAL, None, len)
+    tup = struct.unpack(fmt, buf)
+    return tup
+
+volh = open_volume('C:')
+UsnJournalID, FirstUsn, NextUsn, LowestValidUsn, MaxUsn, MaximumSize, AllocationDelta = query_journal(volh)
+close_volume(volh)
+print 'Journal id is 0x%016x' % UsnJournalID
+...
+
+QQQQQQQ的格式对应着 FSCTL_QUERY_USN_JOURNAL中定义的结构体USN_JOURNAL_DATA_V0,大多数的日志命令都有预定义的输入输出数据的结构体，这可以通过python的结构体模块来构造和使用。python的包装函数win32file.DeviceIoControl显然比C语言的函数简单，他的参数是：磁盘句柄，控制码，输入缓存（如果不需要则为none）,输出缓存的最大长度，返回是输出缓存的值
+
+Robustness of Journal data
+日志被设计得有很强的鲁棒性，特别是上天提到的有极限的问题。
+USN日志在改变或者是添加内容的时候永远都是自增的并且有唯一的标识符，应用程序可以使用日志的ID号以及最后处理的日志时间来决定利用这个日志是做一个增量备份还是需要完全地遍历文件系统以便日只能在以后使用。
+
+例如，假若C:\Docs每周都会备份，当工具完成备份的时候，他会记下在他备份的时候USN日志的最后一条记录。当他下次运行的时候，它从X这个记录号起查看之后的日志记录，会发现有一系列的改变，由此他会知道系统没有其他的文件发生改变仅仅只备份这个文件从而高效的工作
+
+可能发生的这些改变在上周，以至于某些文件由于日志文件长度有限而没有记录下来。在这种情况下，更新的USN在日志文件里面会是Y>X，备份工具检测到这个就知道遍历整个USN日志文件然后对整个磁盘进行完全的备份（还有地方可以优化，例如检测两个文件的内容是否完全相同）
+
+列举USN日志的数据可以使用FSCTL_ENUM_USN_DATA这个控制码，每次调用DeviceIoControl函数的时候都会返回一个用户定义的数组大小，里面会填满很多USN日志的数据，利用记录的FRN重复调用此函数知道所有的数据都得到，USN记录是以一个变长的USN_RECORD_V2的结构体存在的
+
+读取USN日志是一个相似的过程，但是使用FSCTL_READ_USN_JOURNAL控制码。用户可以像调用FSCTL_ENUM_USN_DATA一样重复地调用此函数取得USN日志的全部内容，每次调用使用上次得到的记录的USN系列号
+
+其他潜在的破坏是USN可能被隐藏起来了或者被删除然后重新创建了，在这种情况下，在这种情况下，NTFS会给日志文件一个不同的系列号，备份工具记录这个值，如果他和上次备份的时候发生了改变，他就知道需要一个完整的备份。
+
+Maintaining the FRN map
+
+目录在日志文件里表现的非常复杂，文件存在目录里面但是不是所有的文件事件都会被目录记录（更不用说他的父目录）类似的，目录上面的事件也不像它里面包含的文件一样记录下来。
+
+目录和文件都被赋予了一个唯一的FRN（File Reference Numbers）日志会记录被影响的文件的FRN以及他的父目录的FRN
+
+当日志第一次使用的时候（就想上面描述的完整备份）磁盘上面的目录以及文件集合被记录成一系列的日志条目，但是每个仅仅和他的父目录相关联。例如，文件C:\Docs\Work\Projects.txt在USN里面会是一个包含他自己的FRN父目录的FRN以及他的文件名的记录，类似于：
+1012 987 Projects.txt
+
+1012是这个文件的FRN，987是它的父目录的FRN.为了得到文件的全路径名，程序需要有下面这样的记录：
+987 901 work
+901 554 docs
+554 219 （root directory）
+
+然后他就能沿着frn回溯找到文件全路径名 /Docs/Work/Projects.txt.这样分开文件名以及他们的全路径名的好处是如果一个目录移动了或者是重命名，它里面包含的内容没有发生改变：只有他的父目录（可能是新的或者旧的父目录，如他被移动了）需要日志记录
+
+如果程序需要知道文件的全路径名，他需要维护一个从本文件的FRN到父目录的FRN以及它自身名字的映射，这个映射需要和日志的ID以及最后的USN一起保存。可以通过检测目录来建立和维持这个映射。
+
+NTFS磁盘里面的文件可能不止存在于同一个地方，例如，可以在一个其他的目录创建另外一个文件的硬链接，一般的，备份程序不会把多个链接当做同一个文件，而是将每一个当成一个单独的文件，系统调用GetFileInformationByHandle原则上能够检测两个文件是不是同一个文件，然后仅仅复制一份来优化他
+
+decting affected files and directorys
+
+日志会告诉程序从上次到现在一个磁盘文件改变的列表，但是程序如何能够找到“被影响”的文件和目录呢？“被影响”和“被改变是不同的”，对于一个备份工具来说，被影响意味着是否需要重新做备份两者的微妙区别如下：
+1.如果目录发生改变了，那么他的所有子文件都被影响到
+2.如果一个文件改变了，他的所有祖先目录都被影响到（如果一个目录没有被影响到，那么就不需要再循环地处理）
+
+例如，第一条规则说的是如果/Docs/Work被重命名为 /Docs/Business,那么即使文件 /Docs/bussiness/Projects.txt没有发生改变，他也需要重新备份
+对第二条规则来说， 如果/Docs/Work/Projects.txt发生改变了，备份工具必须循环地处理/docs和 /Docs/Work 最后完成备份。如果目录/Docs虾米那没有内容发生改变，备份工具可以更高效地工作，例如合一创建与之前备份的符号链接
+
+两个规则是有对称性的，事实上是查看一个文件的父目录比查看他的所有子文件更容易，这就隐含了当日志发生改变的时候如何实现来维持改变的文件和被影响的目录
+
+基本的备份一个路径的算法如下：
+1.打开日志文件，创建一个日志类
+2.根据被影响的文件数据从NTFS更新日志文件
+3.备份整个目录
+4.关闭日志文件，把最新的状态保存到磁盘以便下次使用
+
+备份一个目录：
+1.根据日志此目录是否被影响到？（新的日志会记录每一个被影响到的事情）
+2.如果没有被影响到，就创建一个符号链接到之前的备份文件，否则重新备份整个目录
+
+备份一个文件：
+通过日志文件是否被影响到？
+如果没有创建一个硬链接到之前的备份文件，否则，复制文件

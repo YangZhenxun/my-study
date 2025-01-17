@@ -1,0 +1,9 @@
+cargo:rustc-link-search=C:\Users\86139\vcpkg\installed\x64-windows\lib
+cargo:rustc-link-lib=zbar
+cargo:rerun-if-env-changed=TARGET
+cargo:rerun-if-env-changed=BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-msvc
+cargo:rerun-if-env-changed=BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_msvc
+cargo:rerun-if-env-changed=BINDGEN_EXTRA_CLANG_ARGS
+cargo:rerun-if-changed=wrapper.h
+cargo:rerun-if-changed=C:\Users\86139\vcpkg\installed\x64-windows\include\zbar.h
+cargo:rerun-if-changed=D:\其他文件\clang+llvm-18.1.8-x86_64-pc-windows-msvc\clang+llvm-18.1.8-x86_64-pc-windows-msvc\lib\clang\18\include\stdint.h

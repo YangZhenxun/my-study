@@ -1,0 +1,1 @@
+Cloned<FlatMap<std::slice::Iter<'_, [Result<DynamicImage, ImageError>; 1]>, std::slice::Iter<'_, Result<DynamicImage, ImageError>>, {closure@C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\imageproc-0.23.0\src\utils.rs:110:27: 110:32}>>

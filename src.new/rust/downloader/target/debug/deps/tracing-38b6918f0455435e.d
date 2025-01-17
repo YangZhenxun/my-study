@@ -1,0 +1,13 @@
+D:\其他文件\my-study--github\src.new\rust\downloader\target\debug\deps\libtracing-38b6918f0455435e.rmeta: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\macros.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\dispatcher.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\field.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\instrument.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\level_filters.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\span.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\stdlib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\subscriber.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\debug\deps\tracing-38b6918f0455435e.d: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\macros.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\dispatcher.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\field.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\instrument.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\level_filters.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\span.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\stdlib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\subscriber.rs
+
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\lib.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\macros.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\dispatcher.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\field.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\instrument.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\level_filters.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\span.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\stdlib.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\tracing-0.1.37\src\subscriber.rs:

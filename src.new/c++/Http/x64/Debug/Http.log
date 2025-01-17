@@ -1,0 +1,4 @@
+﻿  client.cpp
+C:\Users\86139\vcpkg\installed\x64-windows\include\iconv.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+D:\my-study--github\src.new\c++\Http\client.h(56,29): warning C4129: “s”: 不可识别的字符转义序列
+  Http.vcxproj -> D:\my-study--github\src.new\c++\Http\x64\Debug\Http.lib

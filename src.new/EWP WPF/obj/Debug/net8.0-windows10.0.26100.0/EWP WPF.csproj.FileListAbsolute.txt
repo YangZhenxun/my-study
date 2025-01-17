@@ -1,0 +1,36 @@
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\Styles.baml
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\MainWindow.g.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\UserControl1.g.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\App.g.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\GeneratedInternalTypeHelper.g.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF_MarkupCompile.cache
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF_MarkupCompile.lref
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\UserControl1.baml
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\refint\EWP WPF.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.pdb
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\EWP WPF.exe
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\EWP WPF.deps.json
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\EWP WPF.runtimeconfig.json
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\EWP WPF.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\EWP WPF.pdb
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\Microsoft.Windows.SDK.NET.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\WinRT.Runtime.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\MainWindow.baml
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.GeneratedMSBuildEditorConfig.editorconfig
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.AssemblyInfoInputs.cache
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.AssemblyInfo.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.csproj.CoreCompileInputs.cache
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.sourcelink.json
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.csproj.Up2Date
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.genruntimeconfig.cache
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\ref\EWP WPF.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.csproj.AssemblyReference.cache
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\DocumentFormat.OpenXml.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\DocumentFormat.OpenXml.Framework.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\System.IO.Packaging.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\EWP WPF.g.resources
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\UserControl2.g.cs
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\UserControl2.baml
+D:\其他文件\my-study--github\src.new\EWP WPF\bin\Debug\net8.0-windows10.0.26100.0\CommunityToolkit.Mvvm.dll
+D:\其他文件\my-study--github\src.new\EWP WPF\obj\Debug\net8.0-windows10.0.26100.0\Styles.g.cs

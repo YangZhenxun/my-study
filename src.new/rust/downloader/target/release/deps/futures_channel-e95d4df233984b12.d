@@ -1,0 +1,11 @@
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\libfutures_channel-e95d4df233984b12.rmeta: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\lock.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\mpsc\mod.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\mpsc\queue.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\oneshot.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\libfutures_channel-e95d4df233984b12.rlib: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\lock.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\mpsc\mod.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\mpsc\queue.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\oneshot.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\futures_channel-e95d4df233984b12.d: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\lock.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\mpsc\mod.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\mpsc\queue.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\oneshot.rs
+
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\lib.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\lock.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\mpsc\mod.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\mpsc\queue.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\futures-channel-0.3.28\src\oneshot.rs:

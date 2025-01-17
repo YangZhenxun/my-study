@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "dgSpecHash": "4/Sp1Qsh+Bg=",
+  "success": true,
+  "projectFilePath": "D:\\其他文件\\my-study--github\\src.new\\EWP WPF\\EWP WPF.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\86139\\.nuget\\packages\\communitytoolkit.mvvm\\8.3.2\\communitytoolkit.mvvm.8.3.2.nupkg.sha512",
+    "C:\\Users\\86139\\.nuget\\packages\\documentformat.openxml\\3.1.1\\documentformat.openxml.3.1.1.nupkg.sha512",
+    "C:\\Users\\86139\\.nuget\\packages\\documentformat.openxml.framework\\3.1.1\\documentformat.openxml.framework.3.1.1.nupkg.sha512",
+    "C:\\Users\\86139\\.nuget\\packages\\system.io.packaging\\8.0.1\\system.io.packaging.8.0.1.nupkg.sha512",
+    "C:\\Users\\86139\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.26100.54\\microsoft.windows.sdk.net.ref.10.0.26100.54.nupkg.sha512"
+  ],
+  "logs": []
+}

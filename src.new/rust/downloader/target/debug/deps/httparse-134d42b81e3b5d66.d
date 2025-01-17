@@ -1,0 +1,12 @@
+D:\其他文件\my-study--github\src.new\rust\downloader\target\debug\deps\libhttparse-134d42b81e3b5d66.rmeta: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\iter.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\macros.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\mod.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\sse42.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\avx2.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\debug\deps\libhttparse-134d42b81e3b5d66.rlib: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\iter.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\macros.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\mod.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\sse42.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\avx2.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\debug\deps\httparse-134d42b81e3b5d66.d: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\iter.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\macros.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\mod.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\sse42.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\avx2.rs
+
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\lib.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\iter.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\macros.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\mod.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\sse42.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\httparse-1.8.0\src\simd\avx2.rs:

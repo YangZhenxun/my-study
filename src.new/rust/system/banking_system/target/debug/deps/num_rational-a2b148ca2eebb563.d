@@ -1,0 +1,6 @@
+D:\其他文件\my-study--github\src.new\rust\system\banking_system\target\debug\deps\libnum_rational-a2b148ca2eebb563.rmeta: C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-rational-0.3.2\src\lib.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-rational-0.3.2\src\pow.rs
+
+D:\其他文件\my-study--github\src.new\rust\system\banking_system\target\debug\deps\num_rational-a2b148ca2eebb563.d: C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-rational-0.3.2\src\lib.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-rational-0.3.2\src\pow.rs
+
+C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-rational-0.3.2\src\lib.rs:
+C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-rational-0.3.2\src\pow.rs:

@@ -1,0 +1,13 @@
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\liburl-d8a32397de7a6070.rmeta: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\host.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\origin.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\parser.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\path_segments.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\slicing.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\quirks.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\liburl-d8a32397de7a6070.rlib: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\host.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\origin.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\parser.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\path_segments.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\slicing.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\quirks.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\release\deps\url-d8a32397de7a6070.d: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\host.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\origin.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\parser.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\path_segments.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\slicing.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\quirks.rs
+
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\lib.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\host.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\origin.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\parser.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\path_segments.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\slicing.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\url-2.4.0\src\quirks.rs:

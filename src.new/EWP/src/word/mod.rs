@@ -1,1 +1,1 @@
-mod read_of_docx;
+pub mod read_of_docx;

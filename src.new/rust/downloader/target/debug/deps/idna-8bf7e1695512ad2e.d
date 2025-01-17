@@ -1,0 +1,10 @@
+D:\其他文件\my-study--github\src.new\rust\downloader\target\debug\deps\libidna-8bf7e1695512ad2e.rmeta: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\punycode.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\uts46.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\uts46_mapping_table.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\debug\deps\libidna-8bf7e1695512ad2e.rlib: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\punycode.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\uts46.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\uts46_mapping_table.rs
+
+D:\其他文件\my-study--github\src.new\rust\downloader\target\debug\deps\idna-8bf7e1695512ad2e.d: C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\lib.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\punycode.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\uts46.rs C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\uts46_mapping_table.rs
+
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\lib.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\punycode.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\uts46.rs:
+C:\Users\86139\.cargo\registry\src\rsproxy.cn-8f6827c7555bfaf8\idna-0.4.0\src\uts46_mapping_table.rs:
