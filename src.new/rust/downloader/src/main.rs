@@ -1,5 +1,6 @@
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 mod fake_useragent;
 use std::error::Error;
 use log::{trace, warn};
@@ -61,9 +62,26 @@ async fn split(filesize: u64, num_threads: u64) -> Vec<(u64, u64)>{
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 use fake_user_agent::get_rua;
 use std::collections::HashMap;
 >>>>>>> Stashed changes
+
+
+async fn total(url: String, session: reqwest::Client, header: reqwest::header::HeaderMap) -> Result<i64, Box<dyn std::error::Error>>{
+    let req = session.get(url)
+        .headers(header)
+        .send()
+        .await?
+        .json::<HashMap<String, serde_json::value::Value>>()
+        .await?;
+    println!("{:#?}", req);
+    let cont_len: String = String::from("Content-Length");
+    let tot: i64= req.get(&cont_len).unwrap().clone().as_i64().unwrap();
+    println!("{}", tot.clone());
+    Ok(tot)
+}
 
 
 async fn total(url: String, session: reqwest::Client, header: reqwest::header::HeaderMap) -> Result<i64, Box<dyn std::error::Error>>{
@@ -127,6 +145,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file_tot = total(url, client, a_header).await?;
     println!("{:#?}", file_tot);
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
