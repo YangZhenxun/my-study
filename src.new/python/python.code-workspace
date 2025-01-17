@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../src.old/Python"
+		},
+		{
+			"path": "../../../downloader/Downloader"
+		},
+		{
+			"name": "[YangZhenxun/my-study source archive]",
+			"uri": "codeql-zip-archive://1-137/c:\\Users\\86139\\AppData\\Roaming\\Code\\User\\workspaceStorage\\9138875d7f8edb4aa845052f4c284121\\GitHub.vscode-codeql\\python\\codeql_db\\src.zip"
+		}
+	],
+	"settings": {}
+}

@@ -1,0 +1,10 @@
+D:\my-study--github\src.new\rust\downloader\target\debug\deps\shellexpand-f052cf818bc7c5c0.rmeta: C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\lib.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\strings.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\wtraits.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\funcs.rs
+
+D:\my-study--github\src.new\rust\downloader\target\debug\deps\libshellexpand-f052cf818bc7c5c0.rlib: C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\lib.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\strings.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\wtraits.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\funcs.rs
+
+D:\my-study--github\src.new\rust\downloader\target\debug\deps\shellexpand-f052cf818bc7c5c0.d: C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\lib.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\strings.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\wtraits.rs C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\funcs.rs
+
+C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\lib.rs:
+C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\strings.rs:
+C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\wtraits.rs:
+C:\Users\86139\.cargo\registry\src\index.crates.io-6f17d22bba15001f\shellexpand-3.1.0\src\funcs.rs:
