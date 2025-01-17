@@ -29,4 +29,7 @@ shellexpand = "3"
 serde = "1.0.118"
 serde_json = "1"
 serde_derive = "1"
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
