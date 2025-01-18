@@ -1,0 +1,3 @@
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/hex(bin)and asm/CMakeFiles/build.dir
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/hex(bin)and asm/CMakeFiles/edit_cache.dir
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/hex(bin)and asm/CMakeFiles/rebuild_cache.dir

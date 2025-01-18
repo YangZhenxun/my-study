@@ -1,0 +1,8 @@
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/libzerocopy-893c531c84cb0465.rmeta: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/byteorder.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/derive_util.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/post_monomorphization_compile_fail_tests.rs
+
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/zerocopy-893c531c84cb0465.d: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/byteorder.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/derive_util.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/post_monomorphization_compile_fail_tests.rs
+
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/lib.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/byteorder.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/derive_util.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zerocopy-0.6.6/src/post_monomorphization_compile_fail_tests.rs:

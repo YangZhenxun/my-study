@@ -1,0 +1,9 @@
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/libtower_layer-d5d48e4a623bd72c.rmeta: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/identity.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/layer_fn.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/stack.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/tuple.rs
+
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/tower_layer-d5d48e4a623bd72c.d: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/identity.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/layer_fn.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/stack.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/tuple.rs
+
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/lib.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/identity.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/layer_fn.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/stack.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tower-layer-0.3.2/src/tuple.rs:

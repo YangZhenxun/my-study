@@ -1,0 +1,14 @@
+[
+{
+  "directory": "/Users/yangzhenxun/Documents/GitHub/my-study/src.new/hex(bin)and asm/build",
+  "command": "/opt/homebrew/bin/nasm -o CMakeFiles/build.dir/testa.asm.o \"/Users/yangzhenxun/Documents/GitHub/my-study/src.new/hex(bin)and asm/testa.asm\"",
+  "file": "/Users/yangzhenxun/Documents/GitHub/my-study/src.new/hex(bin)and asm/testa.asm",
+  "output": "CMakeFiles/build.dir/testa.asm.o"
+},
+{
+  "directory": "/Users/yangzhenxun/Documents/GitHub/my-study/src.new/hex(bin)and asm/build",
+  "command": "/opt/homebrew/bin/nasm -o CMakeFiles/build.dir/ipl.asm.o \"/Users/yangzhenxun/Documents/GitHub/my-study/src.new/hex(bin)and asm/ipl.asm\"",
+  "file": "/Users/yangzhenxun/Documents/GitHub/my-study/src.new/hex(bin)and asm/ipl.asm",
+  "output": "CMakeFiles/build.dir/ipl.asm.o"
+}
+]

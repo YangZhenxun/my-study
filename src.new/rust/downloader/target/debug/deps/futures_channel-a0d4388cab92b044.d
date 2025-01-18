@@ -1,0 +1,9 @@
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/libfutures_channel-a0d4388cab92b044.rmeta: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/lock.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/mpsc/mod.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/mpsc/queue.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/oneshot.rs
+
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/futures_channel-a0d4388cab92b044.d: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/lock.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/mpsc/mod.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/mpsc/queue.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/oneshot.rs
+
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/lib.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/lock.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/mpsc/mod.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/mpsc/queue.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-channel-0.3.28/src/oneshot.rs:

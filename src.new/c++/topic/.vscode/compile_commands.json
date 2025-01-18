@@ -1,0 +1,6 @@
+[
+{
+  "directory": "/Users/yangzhenxun/Documents/GitHub/my-study/src.new/c++/topic",
+  "arguments": ["/opt/homebrew/opt/llvm/bin/clang", "-c", "-Qunused-arguments", "-o", "build/.objs/topic/macosx/arm64/src/main.cpp.o", "src/main.cpp"],
+  "file": "src/main.cpp"
+}]

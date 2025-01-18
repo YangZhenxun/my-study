@@ -1,0 +1,9 @@
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/system/rinux/target/debug/deps/libcargo_metadata-bd4c739be5ccebe0.rmeta: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/dependency.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/diagnostic.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/errors.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/messages.rs
+
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/system/rinux/target/debug/deps/cargo_metadata-bd4c739be5ccebe0.d: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/dependency.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/diagnostic.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/errors.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/messages.rs
+
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/lib.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/dependency.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/diagnostic.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/errors.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cargo_metadata-0.9.1/src/messages.rs:

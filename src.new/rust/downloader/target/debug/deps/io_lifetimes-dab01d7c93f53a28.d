@@ -1,0 +1,10 @@
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/libio_lifetimes-dab01d7c93f53a28.rmeta: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/portability.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/traits.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/example_ffi.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/raw.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/views.rs
+
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/io_lifetimes-dab01d7c93f53a28.d: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/portability.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/traits.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/example_ffi.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/raw.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/views.rs
+
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/lib.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/portability.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/traits.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/example_ffi.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/raw.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/io-lifetimes-1.0.11/src/views.rs:

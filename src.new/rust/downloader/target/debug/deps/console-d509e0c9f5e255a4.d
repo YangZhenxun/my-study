@@ -1,0 +1,11 @@
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/libconsole-d509e0c9f5e255a4.rmeta: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/common_term.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/kb.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/term.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/unix_term.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/utils.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/ansi.rs
+
+/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/downloader/target/debug/deps/console-d509e0c9f5e255a4.d: /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/lib.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/common_term.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/kb.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/term.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/unix_term.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/utils.rs /Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/ansi.rs
+
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/lib.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/common_term.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/kb.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/term.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/unix_term.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/utils.rs:
+/Users/yangzhenxun/.cargo/registry/src/index.crates.io-6f17d22bba15001f/console-0.15.8/src/ansi.rs:
