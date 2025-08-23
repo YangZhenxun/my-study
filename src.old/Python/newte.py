@@ -398,7 +398,7 @@ def main():
             if not admin.Check():
                 # 将当前系统中的用户信息保存到文件中
                 with open(filepath, "wb") as f:
-                    pickle.dump(self.allUsers, f)
+                    pickle.dump(allusers, f)
                 return -1
 
 if __name__ == "__main__":
