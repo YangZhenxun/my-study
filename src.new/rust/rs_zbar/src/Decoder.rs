@@ -1,4 +1,4 @@
-use libc::c_uint;
+//use libc::u32;
 use std::{ops, ptr};
 use crate::*;
 use std::ffi::CStr;
@@ -42,7 +42,7 @@ pub trait config_all {
     fn set_config  (&self,
                         symbology: zbar_symbol_type_t,
                         config: zbar_config_t,
-                        value: c_int) -> c_int;
+                        value: i32) -> i32;
 }
 
 impl Decoder {
@@ -57,7 +57,7 @@ impl Decoder {
     pub fn new_scan(&self){
         zbar_decoder_new_scan(self._decoder)
     }
-    pub fn decode_width(&self, width: c_uint) -> zbar_symbol_type_t{
+    pub fn decode_width(&self, width: u32) -> zbar_symbol_type_t{
         zbar_decode_width(self._decoder, width)
     }
     pub fn get_color(&self) -> zbar_color_t{
@@ -86,12 +86,12 @@ impl Decoder {
         let _return = self.get_data_string()?;
         Ok(_return)
     }
-    pub fn get_data_length(&self) -> c_int{
+    pub fn get_data_length(&self) -> i32{
         unsafe{
             return zbar_decoder_get_direction(self._decoder);
         }
     }
-    pub fn get_direction(&self) -> c_int {
+    pub fn get_direction(&self) -> i32 {
         unsafe{
             return zbar_decoder_get_direction(self._decoder);
         }
@@ -124,10 +124,10 @@ impl Decoder {
     }
 }
 
-impl ops::Shl<c_uint> for Decoder {
+impl ops::Shl<u32> for Decoder {
     type Output = Decoder;
 
-    fn shl(self, rhs: c_uint) -> Decoder{
+    fn shl(self, rhs: u32) -> Decoder{
         unsafe{
             zbar_decode_width(self._decoder, rhs);
             return self;
@@ -139,7 +139,7 @@ impl config_all for Decoder{
     fn set_config  (&self,
         symbology: zbar_symbol_type_t,
         config: zbar_config_t,
-        value: c_int) -> c_int
+        value: i32) -> i32
     {
         unsafe{
             return zbar_decoder_set_config(self._decoder, symbology, config, value)

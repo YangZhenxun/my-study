@@ -70,10 +70,10 @@
 /** @name Global library interfaces */
 /*@{*/
 
-extern crate libc;
+//extern crate libc;
 use std::ops::BitAnd;
 
-use libc::{c_char, c_float, c_int, c_uint, c_ulong, c_ulonglong, c_void};
+//use libc::{c_char, c_float, c_int, c_uint, c_ulong, c_ulonglong, c_void};
 
 /** "color" of element: bar or space. */
 pub enum zbar_color_e{

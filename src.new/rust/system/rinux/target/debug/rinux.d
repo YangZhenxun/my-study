@@ -1,1 +1,0 @@
-/Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/system/rinux/target/debug/rinux: /Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/system/rinux/src/lang_items.rs /Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/system/rinux/src/main.rs /Users/yangzhenxun/Documents/GitHub/my-study/src.new/rust/system/rinux/src/vga_buf.rs

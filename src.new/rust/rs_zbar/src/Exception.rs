@@ -1,5 +1,5 @@
-extern crate libc;
-use libc::c_void;
+//extern crate libc;
+//use libc::c_void;
 use std::{error::Error, fmt::Display};
 use crate::cxx_std_need::bad_alloc_def_new;
 
