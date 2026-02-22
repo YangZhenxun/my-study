@@ -1,0 +1,28 @@
+C     A SAMPLE FORTRAN 66 PROGRAM
+C     SIMULATE DROPPING AN OBJECT
+      PROGRAM DROP
+      DOUBLE PRECISION Y0, Y, T, INC
+      T = 0.0
+      
+C     INPUT INITIAL HEIGHT
+10    WRITE(*,*) 'ENTER STARTING HEIGHT (Y0 > 0):'
+      READ(*,*) Y0
+      IF (Y0 .GT. 0.0) GOTO 20
+      WRITE(*,*) 'ERROR: HEIGHT MUST BE POSITIVE.'
+      GOTO 10
+
+C     INPUT TIME INCREMENT
+20    WRITE(*,*) 'ENTER TIME INCREMENT:'
+      READ(*,*) INC
+      IF (INC .GT. 0.0) GOTO 30
+      WRITE(*,*) 'ERROR: INCREMENT MUST BE POSITIVE.'
+      GOTO 20
+
+C     CALCULATION LOOP (G = 9.8)
+30    Y = Y0 - (0.5 * 9.8 * T * T)
+      WRITE(*,*) 'TIME:', T, ' HEIGHT:', Y
+      T = T + INC
+      IF (Y .GT. 0.0) GOTO 30
+
+      WRITE(*,*) 'OBJECT HAS HIT THE GROUND.'
+      END
