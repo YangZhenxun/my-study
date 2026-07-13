@@ -1,0 +1,7 @@
+welcome:
+  title: "EWP Studio"
+  version: "版本 0.0.1 alpha"
+  create_new_project: "新建项目..."
+  clone_repository: "克隆 Git 仓库..."
+  open_project: "打开已有项目..."
+  recent: "最近打开"

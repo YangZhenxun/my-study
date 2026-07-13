@@ -1,0 +1,7 @@
+welcome:
+  title: "EWP Studio"
+  version: "版本 0.0.1 alpha"
+  create_new_project: "新增專案..."
+  clone_repository: "複製 Git 儲存庫..."
+  open_project: "開啟現有專案..."
+  recent: "最近開啟"

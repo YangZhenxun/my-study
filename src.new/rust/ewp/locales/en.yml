@@ -1,0 +1,7 @@
+welcome:
+  title: "EWP Studio"
+  version: "Version 0.0.1 alpha"
+  create_new_project: "Create New Project..."
+  clone_repository: "Clone Git Repository..."
+  open_project: "Open Existing Project..."
+  recent: "Recent"

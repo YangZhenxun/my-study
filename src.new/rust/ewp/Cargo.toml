@@ -1,0 +1,12 @@
+[package]
+name = "ewp"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+gpui = { version = "*" }
+rust-i18n = "3"
+sys-locale = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dirs = "5"
