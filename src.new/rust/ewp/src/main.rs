@@ -1,8 +1,11 @@
+mod app_menus;
 mod data;
+mod ewp_actions;
 
-use data::{AppData, FileType, RecentDoc};
+use data::AppData;
+use ewp_actions::*;
 use gpui::{
-    App, Application, AssetSource, Bounds, Context, FontWeight, Render, SharedString,
+    App, Application, AssetSource, Bounds, Context, FontWeight, KeyBinding, Render, SharedString,
     TitlebarOptions, Window, WindowBounds, WindowOptions, div, img, prelude::*, px, rgb, rgba,
     size, svg,
 };
@@ -20,7 +23,7 @@ const ICON_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/icon-256.pn
 const ASSETS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets");
 
 // ──────────────────────────────────────────────
-// AssetSource —— 让 GPUI 的 svg() 能加载本地 SVG 文件
+// AssetSource
 // ──────────────────────────────────────────────
 
 struct FileAssetSource;
@@ -120,7 +123,7 @@ impl Render for Welcome {
                             )),
                     ),
             )
-            // ═══ 右栏：最近文档列表 ═══
+            // ═══ 右栏 ═══
             .child(
                 div()
                     .flex()
@@ -138,7 +141,19 @@ impl Render for Welcome {
                             .iter()
                             .enumerate()
                             .map(|(i, doc)| recent_item(i == 0, i, doc)),
-                    ),
+                    )
+                    .when(self.data.recent_docs.is_empty(), |panel| {
+                        panel.child(
+                            div()
+                                .flex()
+                                .flex_1()
+                                .items_center()
+                                .justify_center()
+                                .text_sm()
+                                .text_color(rgb(0x86868b))
+                                .child(t!("welcome.no_recent").to_string()),
+                        )
+                    }),
             )
     }
 }
@@ -151,7 +166,6 @@ fn icon_path(name: &str) -> String {
     format!("icons/{name}.svg")
 }
 
-/// 全宽操作按钮：左侧 SVG 图标 + 右侧文字，浅灰圆角背景。
 fn action_button(id: &'static str, icon_name: &'static str, label: String) -> impl IntoElement {
     div()
         .id(id)
@@ -178,8 +192,7 @@ fn action_button(id: &'static str, icon_name: &'static str, label: String) -> im
         .on_click(|_, _, _| {})
 }
 
-/// 最近文档列表项。图标根据 file_type 切换。
-fn recent_item(is_selected: bool, id: usize, doc: &RecentDoc) -> impl IntoElement {
+fn recent_item(is_selected: bool, id: usize, doc: &data::RecentDoc) -> impl IntoElement {
     let bg = if is_selected {
         rgb(0x007aff)
     } else {
@@ -240,6 +253,70 @@ fn recent_item(is_selected: bool, id: usize, doc: &RecentDoc) -> impl IntoElemen
 }
 
 // ──────────────────────────────────────────────
+// 快捷键 & Action 处理器
+// ──────────────────────────────────────────────
+
+fn setup_keybindings(cx: &mut App) {
+    cx.bind_keys(vec![
+        // File
+        KeyBinding::new("cmd-n", NewProject, None),
+        KeyBinding::new("cmd-shift-n", NewWindow, None),
+        KeyBinding::new("cmd-o", OpenProject, None),
+        KeyBinding::new("cmd-shift-u", CloneRepository, None),
+        KeyBinding::new("cmd-shift-w", CloseWindow, None),
+        KeyBinding::new("cmd-w", CloseProject, None),
+        // Edit
+        KeyBinding::new("cmd-f", Find, None),
+        // View
+        KeyBinding::new("cmd-=", ZoomIn, None),
+        KeyBinding::new("cmd--", ZoomOut, None),
+        KeyBinding::new("cmd-0", ResetZoom, None),
+        KeyBinding::new("ctrl-cmd-f", ToggleFullScreen, None),
+        // App
+        KeyBinding::new("cmd-comma", Settings, None),
+        KeyBinding::new("cmd-q", Quit, None),
+        // Window
+        KeyBinding::new("cmd-m", Minimize, None),
+    ]);
+}
+
+fn setup_actions(cx: &mut App) {
+    // File
+    cx.on_action::<NewProject>(|_, _cx| eprintln!("[EWP] New Project"));
+    cx.on_action::<NewWindow>(|_, _cx| eprintln!("[EWP] New Window"));
+    cx.on_action::<OpenProject>(|_, _cx| eprintln!("[EWP] Open Project"));
+    cx.on_action::<CloneRepository>(|_, _cx| eprintln!("[EWP] Clone Repository"));
+    cx.on_action::<CloseProject>(|_, _cx| eprintln!("[EWP] Close Project"));
+    cx.on_action::<CloseWindow>(|_, _cx| eprintln!("[EWP] Close Window"));
+    // Edit
+    cx.on_action::<Find>(|_, _cx| eprintln!("[EWP] Find"));
+    // View
+    cx.on_action::<ZoomIn>(|_, _cx| eprintln!("[EWP] Zoom In"));
+    cx.on_action::<ZoomOut>(|_, _cx| eprintln!("[EWP] Zoom Out"));
+    cx.on_action::<ResetZoom>(|_, _cx| eprintln!("[EWP] Reset Zoom"));
+    cx.on_action::<ToggleFullScreen>(|_, _cx| eprintln!("[EWP] Toggle Full Screen"));
+    // App
+    cx.on_action::<Quit>(|_, cx| cx.quit());
+    cx.on_action::<Settings>(|_, _cx| eprintln!("[EWP] Settings (TODO)"));
+    cx.on_action::<About>(|_, _cx| eprintln!("[EWP] About (TODO)"));
+    cx.on_action::<Languages>(|_, _cx| eprintln!("[EWP] Languages (TODO)"));
+    // Window
+    cx.on_action::<Minimize>(|_, _cx| eprintln!("[EWP] Minimize (TODO)"));
+    cx.on_action::<Zoom>(|_, _cx| eprintln!("[EWP] Zoom (TODO)"));
+    // Help
+    cx.on_action::<EwpHelp>(|_, _cx| eprintln!("[EWP] Help (TODO)"));
+    cx.on_action::<OpenDocumentation>(|_, _cx| eprintln!("[EWP] Documentation (TODO)"));
+    cx.on_action::<ReportIssue>(|_, _cx| eprintln!("[EWP] Report Issue (TODO)"));
+    // macOS window menu
+    #[cfg(target_os = "macos")]
+    {
+        cx.on_action::<Hide>(|_, _cx| eprintln!("[EWP] Hide (TODO)"));
+        cx.on_action::<HideOthers>(|_, _cx| eprintln!("[EWP] Hide Others (TODO)"));
+        cx.on_action::<ShowAll>(|_, _cx| eprintln!("[EWP] Show All (TODO)"));
+    }
+}
+
+// ──────────────────────────────────────────────
 // 系统语言检测
 // ──────────────────────────────────────────────
 
@@ -263,30 +340,20 @@ fn main() {
     let locale = detect_locale();
     rust_i18n::set_locale(locale);
 
-    // 加载持久化数据；首次运行（无数据文件）时写入示例数据
-    let mut app_data = data::load();
-    if app_data.recent_docs.is_empty() {
-        app_data.recent_docs = vec![
-            RecentDoc {
-                name: "EWP".into(),
-                path: "~/Documents/oldEWP".into(),
-                file_type: FileType::Document,
-            },
-            RecentDoc {
-                name: "neoEWP".into(),
-                path: "~/Documents".into(),
-                file_type: FileType::Document,
-            },
-        ];
-        data::save(&app_data);
-    }
+    let app_data = data::load();
 
-    // 打印数据目录路径（方便调试）
     eprintln!("[EWP] Data directory: {}", data::data_dir().display());
 
     Application::new()
         .with_assets(FileAssetSource)
         .run(move |cx: &mut App| {
+            // 菜单栏（从 app_menus 模块构建）
+            cx.set_menus(app_menus::app_menus());
+
+            // 快捷键 & action 处理器
+            setup_keybindings(cx);
+            setup_actions(cx);
+
             let bounds = Bounds::centered(None, size(px(800.), px(480.)), cx);
             cx.open_window(
                 WindowOptions {
@@ -299,7 +366,9 @@ fn main() {
                     ..Default::default()
                 },
                 |_window, cx| {
-                    cx.new(|_| Welcome { data: app_data.clone() })
+                    cx.new(|_| Welcome {
+                        data: app_data.clone(),
+                    })
                 },
             )
             .unwrap();
