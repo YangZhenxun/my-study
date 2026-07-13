@@ -1,0 +1,15 @@
+# 交叉编译配置：在 macOS 上为 Windows (希沃白板) 编译。
+#
+# 工具链：Homebrew 的 mingw-w64（提供 x86_64-w64-mingw32-gcc 链接器）。
+#   brew install mingw-w64
+#   rustup target add x86_64-pc-windows-gnu
+#
+# 编译命令：
+#   cargo build --release --target x86_64-pc-windows-gnu
+#
+# -static 让链接器静态捆绑 libgcc / libwinpthread 等 CRT 依赖，
+#   生成的 exe 拷到任意 Windows 机器（含希沃白板）即可运行，无需附带 mingw 运行时 DLL。
+
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+rustflags = ["-C", "link-args=-static"]
