@@ -1,13 +1,19 @@
 mod app_menus;
 mod data;
+mod editor_view;
 mod ewp_actions;
+mod model;
+mod settings_view;
 
 use data::AppData;
+use editor_view::EditorView;
 use ewp_actions::*;
+use model::Model;
+use settings_view::SettingsView;
 use gpui::{
-    App, Application, AssetSource, Bounds, Context, FontWeight, KeyBinding, Render, SharedString,
-    TitlebarOptions, Window, WindowBounds, WindowOptions, div, img, prelude::*, px, rgb, rgba,
-    size, svg,
+    App, Application, AssetSource, Bounds, ClickEvent, Context, FontWeight, KeyBinding, PathPromptOptions,
+    Render, SharedString, TitlebarOptions, Window, WindowBounds, WindowOptions, div, img,
+    prelude::*, px, rgb, rgba, size, svg,
 };
 use rust_i18n::t;
 use std::path::PathBuf;
@@ -57,10 +63,12 @@ impl AssetSource for FileAssetSource {
 
 struct Welcome {
     data: AppData,
+    /// 当前选中的最近项索引（点击列表项时移动高亮）。
+    selected: Option<usize>,
 }
 
 impl Render for Welcome {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .flex()
             .flex_row()
@@ -99,7 +107,8 @@ impl Render for Welcome {
                             .text_color(rgb(0x86868b))
                             .child(t!("welcome.version").to_string()),
                     )
-                    .child(
+                    .child({
+                        let this = cx.weak_entity();
                         div()
                             .flex()
                             .flex_col()
@@ -110,18 +119,21 @@ impl Render for Welcome {
                                 "new",
                                 "plus",
                                 t!("welcome.create_new_project").to_string(),
-                            ))
-                            .child(action_button(
-                                "clone",
-                                "arrow-down",
-                                t!("welcome.clone_repository").to_string(),
+                                move |_event, _window, cx| create_new_project(cx),
                             ))
                             .child(action_button(
                                 "open",
                                 "folder",
                                 t!("welcome.open_project").to_string(),
-                            )),
-                    ),
+                                {
+                                    let this = this.clone();
+                                    move |_event, _window, cx| {
+                                        let this = this.clone();
+                                        open_project(Some(this), cx)
+                                    }
+                                },
+                            ))
+                    }),
             )
             // ═══ 右栏 ═══
             .child(
@@ -135,13 +147,31 @@ impl Render for Welcome {
                     .pr(px(24.))
                     .pl(px(16.))
                     .bg(rgb(0xf8f9fa))
-                    .children(
+                    .children({
+                        let this = cx.weak_entity();
                         self.data
                             .recent_docs
                             .iter()
                             .enumerate()
-                            .map(|(i, doc)| recent_item(i == 0, i, doc)),
-                    )
+                            .map(|(i, doc)| {
+                                let path = doc.path.clone();
+                                recent_item(
+                                    self.selected == Some(i),
+                                    i,
+                                    doc,
+                                    {
+                                        let this = this.clone();
+                                        let path = path.clone();
+                                        move |_event, _window, cx| {
+                                            let this = this.clone();
+                                            let path = path.clone();
+                                            open_recent(this, i, path, cx)
+                                        }
+                                    },
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    })
                     .when(self.data.recent_docs.is_empty(), |panel| {
                         panel.child(
                             div()
@@ -166,7 +196,12 @@ fn icon_path(name: &str) -> String {
     format!("icons/{name}.svg")
 }
 
-fn action_button(id: &'static str, icon_name: &'static str, label: String) -> impl IntoElement {
+fn action_button(
+    id: &'static str,
+    icon_name: &'static str,
+    label: String,
+    on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> impl IntoElement {
     div()
         .id(id)
         .w_full()
@@ -181,6 +216,7 @@ fn action_button(id: &'static str, icon_name: &'static str, label: String) -> im
         .cursor_pointer()
         .text_base()
         .text_color(rgb(0x1d1d1f))
+        .hover(|s| s.bg(rgb(0xe5e5ea)))
         .child(
             svg()
                 .path(icon_path(icon_name))
@@ -189,10 +225,15 @@ fn action_button(id: &'static str, icon_name: &'static str, label: String) -> im
                 .text_color(rgb(0x86868b)),
         )
         .child(div().flex_1().child(SharedString::from(label)))
-        .on_click(|_, _, _| {})
+        .on_click(on_click)
 }
 
-fn recent_item(is_selected: bool, id: usize, doc: &data::RecentDoc) -> impl IntoElement {
+fn recent_item(
+    is_selected: bool,
+    id: usize,
+    doc: &data::RecentDoc,
+    on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> impl IntoElement {
     let bg = if is_selected {
         rgb(0x007aff)
     } else {
@@ -249,7 +290,146 @@ fn recent_item(is_selected: bool, id: usize, doc: &data::RecentDoc) -> impl Into
                         .child(doc.path.clone()),
                 ),
         )
-        .on_click(|_, _, _| {})
+        .on_click(on_click)
+}
+
+// ──────────────────────────────────────────────
+// 交互逻辑（让欢迎窗口真正可用，而非花瓶）
+// ──────────────────────────────────────────────
+
+/// 统一的「打开编辑器窗口」入口：内存文档，不写磁盘（保存弹窗以后再做）。
+/// - name：窗口标题（如 "Untitled" / 文件名）。
+/// - model：若提供则以其内容初始化（来自 .ewp），否则空白。
+fn open_editor(cx: &mut App, name: SharedString, model: Option<Model>) {
+    let bounds = Bounds::centered(None, size(px(900.), px(620.)), cx);
+    let _ = cx.open_window(
+        WindowOptions {
+            titlebar: Some(TitlebarOptions {
+                title: Some(name.clone()),
+                appears_transparent: true,
+                ..Default::default()
+            }),
+            window_bounds: Some(WindowBounds::Windowed(bounds)),
+            ..Default::default()
+        },
+        move |_, app| {
+            app.new(|entity_cx| {
+                let n = name.clone();
+                match &model {
+                    Some(m) => EditorView::new_from_model(entity_cx, n, m.clone()),
+                    None => EditorView::new_blank(entity_cx, n),
+                }
+            })
+        },
+    );
+    cx.activate(true);
+}
+
+/// 「新建项目」：打开一个空白编辑器窗口（内存文档，不写磁盘）。
+fn create_new_project(cx: &mut App) {
+    open_editor(cx, "Untitled".into(), None);
+}
+
+/// 「打开项目」：弹出系统文件选择器，选中后打开编辑器（.ewp 会真正加载模型）。
+/// `this` 为欢迎窗口的弱引用；来自菜单时传 `None`（不更新最近列表）。
+fn open_project(this: Option<gpui::WeakEntity<Welcome>>, cx: &mut App) {
+    let options = PathPromptOptions {
+        files: true,
+        directories: false,
+        multiple: false,
+        prompt: None,
+    };
+    let rx = cx.prompt_for_paths(options);
+    cx.spawn(async move |async_cx| {
+        if let Ok(Ok(Some(paths))) = rx.await {
+            if let Some(path) = paths.into_iter().next() {
+                let name: SharedString = path
+                    .file_name()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_default()
+                    .into();
+                let file_type = data::FileType::from_extension(&path);
+                let model: Option<Model> =
+                    if path.extension().map(|e| e == "ewp").unwrap_or(false) {
+                        match model::ser::load::<Model>(&path, model::ser::NativeFormat::Json) {
+                            Ok(m) => Some(m),
+                            Err(e) => {
+                                eprintln!("[EWP] Failed to open {path:?}: {e}");
+                                None
+                            }
+                        }
+                    } else {
+                        None
+                    };
+                let doc = data::RecentDoc {
+                    name: name.to_string(),
+                    path: path.to_string_lossy().to_string(),
+                    file_type,
+                };
+                let _ = async_cx.update(|app| {
+                    if let Some(this) = this {
+                        let id = this.entity_id();
+                        let _ = this.update(app, |this, _cx| {
+                            data::add_recent_doc(&mut this.data, doc);
+                            this.selected = Some(0);
+                        });
+                        app.notify(id);
+                    }
+                    open_editor(app, name.clone(), model);
+                });
+            }
+        }
+    })
+    .detach();
+}
+
+/// 点击最近列表项：移动高亮，并尝试打开对应编辑器（.ewp 加载模型）。
+fn open_recent(this: gpui::WeakEntity<Welcome>, index: usize, path: String, cx: &mut App) {
+    let id = this.entity_id();
+    let _ = this.update(cx, |this, _cx| {
+        this.selected = Some(index);
+    });
+    cx.notify(id);
+    let pathbuf = std::path::PathBuf::from(&path);
+    let name: SharedString = pathbuf
+        .file_name()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_default()
+        .into();
+    let model: Option<Model> = if pathbuf
+        .extension()
+        .map(|e| e == "ewp")
+        .unwrap_or(false)
+    {
+        match model::ser::load::<Model>(&pathbuf, model::ser::NativeFormat::Json) {
+            Ok(m) => Some(m),
+            Err(e) => {
+                eprintln!("[EWP] Failed to open {path}: {e}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    open_editor(cx, name, model);
+}
+
+/// 「设置」：打开独立设置窗口。
+fn open_settings(cx: &mut App) {
+    let bounds = Bounds::centered(None, size(px(560.), px(460.)), cx);
+    let _ = cx.open_window(
+        WindowOptions {
+            titlebar: Some(TitlebarOptions {
+                title: Some(t!("settings.title").to_string().into()),
+                appears_transparent: true,
+                ..Default::default()
+            }),
+            window_bounds: Some(WindowBounds::Windowed(bounds)),
+            ..Default::default()
+        },
+        |_, cx| cx.new(|entity_cx| SettingsView::new(entity_cx)),
+    );
+    cx.activate(true);
 }
 
 // ──────────────────────────────────────────────
@@ -262,7 +442,6 @@ fn setup_keybindings(cx: &mut App) {
         KeyBinding::new("cmd-n", NewProject, None),
         KeyBinding::new("cmd-shift-n", NewWindow, None),
         KeyBinding::new("cmd-o", OpenProject, None),
-        KeyBinding::new("cmd-shift-u", CloneRepository, None),
         KeyBinding::new("cmd-shift-w", CloseWindow, None),
         KeyBinding::new("cmd-w", CloseProject, None),
         // Edit
@@ -282,10 +461,9 @@ fn setup_keybindings(cx: &mut App) {
 
 fn setup_actions(cx: &mut App) {
     // File
-    cx.on_action::<NewProject>(|_, _cx| eprintln!("[EWP] New Project"));
-    cx.on_action::<NewWindow>(|_, _cx| eprintln!("[EWP] New Window"));
-    cx.on_action::<OpenProject>(|_, _cx| eprintln!("[EWP] Open Project"));
-    cx.on_action::<CloneRepository>(|_, _cx| eprintln!("[EWP] Clone Repository"));
+    cx.on_action::<NewProject>(|_, cx| create_new_project(cx));
+    cx.on_action::<NewWindow>(|_, cx| create_new_project(cx));
+    cx.on_action::<OpenProject>(|_, cx| open_project(None, cx));
     cx.on_action::<CloseProject>(|_, _cx| eprintln!("[EWP] Close Project"));
     cx.on_action::<CloseWindow>(|_, _cx| eprintln!("[EWP] Close Window"));
     // Edit
@@ -294,25 +472,37 @@ fn setup_actions(cx: &mut App) {
     cx.on_action::<ZoomIn>(|_, _cx| eprintln!("[EWP] Zoom In"));
     cx.on_action::<ZoomOut>(|_, _cx| eprintln!("[EWP] Zoom Out"));
     cx.on_action::<ResetZoom>(|_, _cx| eprintln!("[EWP] Reset Zoom"));
-    cx.on_action::<ToggleFullScreen>(|_, _cx| eprintln!("[EWP] Toggle Full Screen"));
+    cx.on_action::<ToggleFullScreen>(|_, cx| {
+        if let Some(handle) = cx.active_window() {
+            let _ = handle.update(cx, |_, window, _| window.toggle_fullscreen());
+        }
+    });
     // App
     cx.on_action::<Quit>(|_, cx| cx.quit());
-    cx.on_action::<Settings>(|_, _cx| eprintln!("[EWP] Settings (TODO)"));
+    cx.on_action::<Settings>(|_, cx| open_settings(cx));
+    cx.on_action::<Languages>(|_, cx| open_settings(cx));
     cx.on_action::<About>(|_, _cx| eprintln!("[EWP] About (TODO)"));
-    cx.on_action::<Languages>(|_, _cx| eprintln!("[EWP] Languages (TODO)"));
-    // Window
-    cx.on_action::<Minimize>(|_, _cx| eprintln!("[EWP] Minimize (TODO)"));
-    cx.on_action::<Zoom>(|_, _cx| eprintln!("[EWP] Zoom (TODO)"));
+    // Window —— 交给 OS 默认行为（最小/最大化/全屏）。
+    cx.on_action::<Minimize>(|_, cx| {
+        if let Some(handle) = cx.active_window() {
+            let _ = handle.update(cx, |_, window, _| window.minimize_window());
+        }
+    });
+    cx.on_action::<Zoom>(|_, cx| {
+        if let Some(handle) = cx.active_window() {
+            let _ = handle.update(cx, |_, window, _| window.zoom_window());
+        }
+    });
     // Help
     cx.on_action::<EwpHelp>(|_, _cx| eprintln!("[EWP] Help (TODO)"));
     cx.on_action::<OpenDocumentation>(|_, _cx| eprintln!("[EWP] Documentation (TODO)"));
     cx.on_action::<ReportIssue>(|_, _cx| eprintln!("[EWP] Report Issue (TODO)"));
-    // macOS window menu
+    // macOS 应用菜单：隐藏 / 隐藏其他 / 全部显示 —— 交给 OS。
     #[cfg(target_os = "macos")]
     {
-        cx.on_action::<Hide>(|_, _cx| eprintln!("[EWP] Hide (TODO)"));
-        cx.on_action::<HideOthers>(|_, _cx| eprintln!("[EWP] Hide Others (TODO)"));
-        cx.on_action::<ShowAll>(|_, _cx| eprintln!("[EWP] Show All (TODO)"));
+        cx.on_action::<Hide>(|_, cx| cx.hide());
+        cx.on_action::<HideOthers>(|_, cx| cx.hide_other_apps());
+        cx.on_action::<ShowAll>(|_, cx| cx.unhide_other_apps());
     }
 }
 
@@ -342,6 +532,9 @@ fn main() {
 
     let app_data = data::load();
 
+    // 验证原生文档模型骨架的序列化 round-trip（写空文档到磁盘再读回）
+    model::ser::demo();
+
     eprintln!("[EWP] Data directory: {}", data::data_dir().display());
 
     Application::new()
@@ -368,6 +561,11 @@ fn main() {
                 |_window, cx| {
                     cx.new(|_| Welcome {
                         data: app_data.clone(),
+                        selected: if app_data.recent_docs.is_empty() {
+                            None
+                        } else {
+                            Some(0)
+                        },
                     })
                 },
             )

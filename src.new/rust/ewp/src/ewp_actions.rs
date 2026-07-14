@@ -11,7 +11,6 @@ actions!(
         NewProject,
         NewWindow,
         OpenProject,
-        CloneRepository,
         CloseProject,
         CloseWindow,
         // Edit

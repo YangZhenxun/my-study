@@ -10,7 +10,7 @@ pub fn app_menus() -> Vec<Menu> {
     vec![
         // ═══ EWP Studio（应用菜单，macOS 第一个菜单）═══
         Menu {
-            name: t!("menu.app.name").to_string().into(),
+            name: "EWP Studio".into(),
             items: vec![
                 MenuItem::action(t!("menu.app.about").to_string(), ewp_actions::About),
                 MenuItem::separator(),
@@ -68,10 +68,6 @@ pub fn app_menus() -> Vec<Menu> {
                 MenuItem::action(
                     t!("menu.file.open_project").to_string(),
                     ewp_actions::OpenProject,
-                ),
-                MenuItem::action(
-                    t!("menu.file.clone_repository").to_string(),
-                    ewp_actions::CloneRepository,
                 ),
                 MenuItem::separator(),
                 MenuItem::action(
@@ -145,7 +141,10 @@ pub fn app_menus() -> Vec<Menu> {
         Menu {
             name: t!("menu.window.name").to_string().into(),
             items: vec![
-                MenuItem::action(t!("menu.window.minimize").to_string(), ewp_actions::Minimize),
+                MenuItem::action(
+                    t!("menu.window.minimize").to_string(),
+                    ewp_actions::Minimize,
+                ),
                 MenuItem::action(t!("menu.window.zoom").to_string(), ewp_actions::Zoom),
             ],
         },

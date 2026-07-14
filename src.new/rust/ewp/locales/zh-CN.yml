@@ -51,3 +51,12 @@ menu:
     ewp_help: "EWP Studio 帮助"
     documentation: "文档"
     report_issue: "报告问题..."
+
+settings:
+  title: "设置"
+  language: "语言"
+  theme: "主题"
+  light: "浅色"
+  dark: "深色"
+  appearance: "外观"
+  apply_hint: "更改会立即生效。"

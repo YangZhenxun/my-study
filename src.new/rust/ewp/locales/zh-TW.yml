@@ -51,3 +51,12 @@ menu:
     ewp_help: "EWP Studio 說明"
     documentation: "文件"
     report_issue: "回報問題..."
+
+settings:
+  title: "設定"
+  language: "語言"
+  theme: "佈景主題"
+  light: "淺色"
+  dark: "深色"
+  appearance: "外觀"
+  apply_hint: "變更會立即生效。"

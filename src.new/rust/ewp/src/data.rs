@@ -3,6 +3,61 @@ use std::fs;
 use std::path::PathBuf;
 
 // ──────────────────────────────────────────────
+// 设置（持久化到 data/settings.json）
+// ──────────────────────────────────────────────
+
+/// 界面主题。
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    #[default]
+    Light,
+    Dark,
+}
+
+/// 应用设置。
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Settings {
+    /// 当前语言代码（与 rust-i18n locale 对应：en / zh-CN / zh-TW）。
+    #[serde(default = "default_locale")]
+    pub locale: String,
+    /// 当前主题。
+    #[serde(default)]
+    pub theme: Theme,
+}
+
+fn default_locale() -> String {
+    "en".to_string()
+}
+
+/// 设置文件路径：`<data_dir>/settings.json`
+fn settings_file_path() -> PathBuf {
+    data_dir().join("settings.json")
+}
+
+/// 加载设置；文件不存在或解析失败时使用默认值。
+pub fn load_settings() -> Settings {
+    let path = settings_file_path();
+    match fs::read_to_string(&path) {
+        Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+        Err(_) => Settings::default(),
+    }
+}
+
+/// 保存设置到磁盘。
+pub fn save_settings(settings: &Settings) {
+    let path = settings_file_path();
+    match serde_json::to_string_pretty(settings) {
+        Ok(json) => {
+            if let Err(e) = fs::write(&path, json) {
+                eprintln!("[EWP] Warning: Failed to write settings file {}: {e}", path.display());
+            }
+        }
+        Err(e) => eprintln!("[EWP] Warning: Failed to serialize settings: {e}"),
+    }
+}
+
+// ──────────────────────────────────────────────
 // 数据模型
 // ──────────────────────────────────────────────
 
@@ -24,6 +79,22 @@ impl FileType {
             FileType::Excel => "spreadsheet",
             FileType::PowerPoint => "presentation",
             FileType::PDF => "pdf",
+        }
+    }
+
+    /// 按文件扩展名推断类型（用于「打开」时自动选图标）。
+    pub fn from_extension(path: &std::path::Path) -> FileType {
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|s| s.to_ascii_lowercase());
+        match ext.as_deref() {
+            Some("docx") | Some("doc") => FileType::Document,
+            Some("xlsx") | Some("xls") => FileType::Excel,
+            Some("pptx") | Some("ppt") => FileType::PowerPoint,
+            Some("pdf") => FileType::PDF,
+            Some("ewp") => FileType::Document,
+            _ => FileType::Document,
         }
     }
 }

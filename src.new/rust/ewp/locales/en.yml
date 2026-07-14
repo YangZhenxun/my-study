@@ -51,3 +51,12 @@ menu:
     ewp_help: "EWP Studio Help"
     documentation: "Documentation"
     report_issue: "Report Issue..."
+
+settings:
+  title: "Settings"
+  language: "Language"
+  theme: "Theme"
+  light: "Light"
+  dark: "Dark"
+  appearance: "Appearance"
+  apply_hint: "Changes apply immediately."
