@@ -8,14 +8,14 @@ mod settings_view;
 use data::AppData;
 use editor_view::EditorView;
 use ewp_actions::*;
-use model::Model;
-use settings_view::SettingsView;
 use gpui::{
-    App, Application, AssetSource, Bounds, ClickEvent, Context, FontWeight, KeyBinding, PathPromptOptions,
-    Render, SharedString, TitlebarOptions, Window, WindowBounds, WindowOptions, div, img,
-    prelude::*, px, rgb, rgba, size, svg,
+    App, Application, AssetSource, Bounds, ClickEvent, Context, FontWeight, KeyBinding,
+    PathPromptOptions, Render, SharedString, TitlebarOptions, Window, WindowBounds, WindowOptions,
+    div, img, prelude::*, px, rgb, rgba, size, svg,
 };
+use model::Model;
 use rust_i18n::t;
+use settings_view::SettingsView;
 use std::path::PathBuf;
 
 // 编译期加载 locales/ 目录下的 YAML 翻译文件，fallback 到英文
@@ -155,20 +155,15 @@ impl Render for Welcome {
                             .enumerate()
                             .map(|(i, doc)| {
                                 let path = doc.path.clone();
-                                recent_item(
-                                    self.selected == Some(i),
-                                    i,
-                                    doc,
-                                    {
+                                recent_item(self.selected == Some(i), i, doc, {
+                                    let this = this.clone();
+                                    let path = path.clone();
+                                    move |_event, _window, cx| {
                                         let this = this.clone();
                                         let path = path.clone();
-                                        move |_event, _window, cx| {
-                                            let this = this.clone();
-                                            let path = path.clone();
-                                            open_recent(this, i, path, cx)
-                                        }
-                                    },
-                                )
+                                        open_recent(this, i, path, cx)
+                                    }
+                                })
                             })
                             .collect::<Vec<_>>()
                     })
@@ -349,18 +344,18 @@ fn open_project(this: Option<gpui::WeakEntity<Welcome>>, cx: &mut App) {
                     .unwrap_or_default()
                     .into();
                 let file_type = data::FileType::from_extension(&path);
-                let model: Option<Model> =
-                    if path.extension().map(|e| e == "ewp").unwrap_or(false) {
-                        match model::ser::load::<Model>(&path, model::ser::NativeFormat::Json) {
-                            Ok(m) => Some(m),
-                            Err(e) => {
-                                eprintln!("[EWP] Failed to open {path:?}: {e}");
-                                None
-                            }
+                let model: Option<Model> = if path.extension().map(|e| e == "ewp").unwrap_or(false)
+                {
+                    match model::ser::load::<Model>(&path, model::ser::NativeFormat::Json) {
+                        Ok(m) => Some(m),
+                        Err(e) => {
+                            eprintln!("[EWP] Failed to open {path:?}: {e}");
+                            None
                         }
-                    } else {
-                        None
-                    };
+                    }
+                } else {
+                    None
+                };
                 let doc = data::RecentDoc {
                     name: name.to_string(),
                     path: path.to_string_lossy().to_string(),
@@ -396,11 +391,7 @@ fn open_recent(this: gpui::WeakEntity<Welcome>, index: usize, path: String, cx: 
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_default()
         .into();
-    let model: Option<Model> = if pathbuf
-        .extension()
-        .map(|e| e == "ewp")
-        .unwrap_or(false)
-    {
+    let model: Option<Model> = if pathbuf.extension().map(|e| e == "ewp").unwrap_or(false) {
         match model::ser::load::<Model>(&pathbuf, model::ser::NativeFormat::Json) {
             Ok(m) => Some(m),
             Err(e) => {
@@ -456,6 +447,7 @@ fn setup_keybindings(cx: &mut App) {
         KeyBinding::new("cmd-q", Quit, None),
         // Window
         KeyBinding::new("cmd-m", Minimize, None),
+        KeyBinding::new("cmd-h", Hide, None),
     ]);
 }
 
@@ -527,8 +519,14 @@ fn detect_locale() -> &'static str {
 // ──────────────────────────────────────────────
 
 fn main() {
-    let locale = detect_locale();
-    rust_i18n::set_locale(locale);
+    // 初始语言：优先用已保存的设置（这样重启后保持上次选择），否则跟随系统语言。
+    let saved = data::load_settings();
+    let locale: String = if saved.locale.is_empty() {
+        detect_locale().to_string()
+    } else {
+        saved.locale
+    };
+    rust_i18n::set_locale(&locale);
 
     let app_data = data::load();
 
