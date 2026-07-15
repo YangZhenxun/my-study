@@ -18,8 +18,8 @@ use gpui::{
     anchored, deferred, AnyElement, App, Bounds, ClickEvent, Context, Corner, Element, ElementId,
     ElementInputHandler, Entity, EntityInputHandler, FocusHandle, Focusable, FontWeight,
     GlobalElementId,
-    InspectorElementId, KeyDownEvent, LayoutId, MouseButton, Pixels, Point, Render, Rgba,
-    ScrollHandle, SharedString, Size, TextRun, UTF16Selection, Window, div, px, point, rgba,
+    InspectorElementId, KeyDownEvent, LayoutId, MouseButton, MouseDownEvent, Pixels, Point, Render,
+    Rgba, ScrollHandle, SharedString, Size, TextRun, UTF16Selection, Window, div, px, point, rgba,
 };
 use gpui::prelude::*;
 use std::ops::Range;
@@ -140,6 +140,9 @@ pub struct EditorView {
     /// 主画布滚动句柄（#canvas 用 `track_scroll` 绑定）。
     /// `bounds_for_range` 据此扣除滚动偏移，使 IME 候选窗随画布滚动正确对齐。
     scroll_handle: ScrollHandle,
+    /// 画布（InputRegion）上次 paint 的元素 bounds（窗口坐标）。
+    /// 由 `InputRegion::paint` 写入；`on_mouse_down` 据此把点击坐标反算成光标位置。
+    last_bounds: Option<Bounds<Pixels>>,
 }
 
 impl EditorView {
@@ -191,7 +194,71 @@ impl EditorView {
             font_dropdown_anchor: point(px(0.), px(0.)),
             marked_range: None,
             scroll_handle: ScrollHandle::new(),
+            last_bounds: None,
         }
+    }
+
+    /// 把一次鼠标点击的窗口坐标反算成光标位置（行 + 列），并移动蓝色光标竖线。
+    ///
+    /// 这是 `bounds_for_range`（光标位置 → 像素矩形）的逆运算：先按统一行高求出行，
+    /// 再对该行做整行 shape、用 `ShapedLine::closest_index_for_x` 求最接近点击 x 的字节，
+    /// 最后换算成字符列。坐标换算必须与 `bounds_for_range` / render 的 padding、gutter、
+    /// 滚动偏移严格一致，否则点击落点会与真实光标错位。
+    fn place_caret_at(&mut self, pos: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(bounds) = self.last_bounds else {
+            return;
+        };
+        if self.lines.is_empty() {
+            return;
+        }
+
+        let lh = line_height(self.font_size);
+        let canvas_pad_x = px(48.0);
+        let canvas_pad_y = px(40.0);
+        let gutter_w = px(36.0);
+        let text_origin_x = canvas_pad_x + gutter_w;
+        let scroll = self.scroll_handle.offset();
+
+        // ── 行 ──
+        let rel_y: f32 = (pos.y - bounds.origin.y - canvas_pad_y - scroll.y).into();
+        let lh_f: f32 = lh.into();
+        let mut line_idx = if lh_f > 0.0 {
+            (rel_y / lh_f).floor() as isize
+        } else {
+            0
+        };
+        let max_line = self.lines.len().saturating_sub(1) as isize;
+        line_idx = line_idx.clamp(0, max_line);
+        let line_idx = line_idx as usize;
+        self.caret_line = line_idx;
+
+        // ── 列：整行 shape 后取最接近点击 x 的字节索引 ──
+        let line = self.lines[line_idx].clone();
+        if line.is_empty() {
+            self.caret_col = 0;
+        } else {
+            let font = gpui::font(self.font_family.clone());
+            let font_size_px = px(self.font_size as f32);
+            let text: SharedString = SharedString::from(line.clone());
+            let run = TextRun {
+                len: text.len(),
+                font,
+                color: gpui::black(),
+                background_color: None,
+                underline: None,
+                strikethrough: None,
+            };
+            let target_x = pos.x - bounds.origin.x - text_origin_x - scroll.x;
+            let shaped = window
+                .text_system()
+                .shape_line(text, font_size_px, &[run], None);
+            let byte = shaped.closest_index_for_x(target_x);
+            // 字节索引 → 字符索引（panic-safe：只统计落在 byte 之前的字符）。
+            self.caret_col = line.char_indices().take_while(|(b, _)| *b < byte).count();
+        }
+
+        self.marked_range = None;
+        cx.notify();
     }
 
     // ── 键盘处理（保留原有逻辑） ──
@@ -806,6 +873,17 @@ impl Render for EditorView {
                                     child: div()
                                         .id("canvas")
                                         .track_scroll(&self.scroll_handle)
+                                        .on_mouse_down(MouseButton::Left, {
+                                            let this = this.clone();
+                                            let focus = self.focus.clone();
+                                            move |event: &MouseDownEvent, window, cx| {
+                                                window.focus(&focus);
+                                                let pos = event.position;
+                                                let _ = this.update(cx, |this, cx| {
+                                                    this.place_caret_at(pos, window, cx)
+                                                });
+                                            }
+                                        })
                                         .flex()
                                         .flex_col()
                                         .size_full()
@@ -1763,6 +1841,9 @@ impl Element for InputRegion {
         // 先正常绘制画布，再注册输入处理器（handle_input 只能在 paint 阶段调用，
         // 且只在 focus 处于本视图时才会真正生效）。
         self.child.paint(window, cx);
+        // 记录本次画布 bounds（窗口坐标），供 on_mouse_down 反算点击位置。
+        // 仅写字段、不 notify，避免触发重绘循环。
+        self.view.update(cx, |v, _| v.last_bounds = Some(bounds));
         window.handle_input(
             &self.focus,
             ElementInputHandler::new(bounds, self.view.clone()),
