@@ -1,0 +1,38 @@
+/// EWP Extension Wit Interface（简化版）
+///
+/// 设计原则（参考 Zed）：
+/// - WASM 扩展只负责 parse / serialize（格式转换逻辑）
+/// - 渲染和交互留 native（GPUI），不走 WASM
+/// - 与 src/model/filter.rs 的 Importer/Exporter trait 对应
+///
+/// 未来 WASM 扩展就是这两个函数的 WASM 实现。
+
+package ewp:extension;
+
+/// 扩展元数据。
+record metadata {
+    name: string,
+    version: string,
+    capabilities: list<string>,
+}
+
+/// 文档模型（序列化后的 EWP 原生模型）。
+record model {
+    /// 模型类型（"text" / "sheet" / "slide"）
+    kind: string,
+    /// 序列化后的模型数据（JSON / CBOR）
+    data: list<u8>,
+}
+
+world extension {
+    /// 初始化扩展，返回元数据。
+    export init-extension: func() -> result<metadata, string>;
+
+    /// 从外部格式（如 .docx / .xlsx / .pptx）解析为 EWP 原生模型。
+    /// 对应 src/model/filter.rs 的 `Importer::import`。
+    export parse: func(data: list<u8>) -> result<model, string>;
+
+    /// 将 EWP 原生模型序列化为外部格式。
+    /// 对应 src/model/filter.rs 的 `Exporter::export`。
+    export serialize: func(model: model) -> result<list<u8>, string>;
+}

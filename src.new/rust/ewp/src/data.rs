@@ -6,14 +6,11 @@ use std::path::PathBuf;
 // 设置（持久化到 data/settings.json）
 // ──────────────────────────────────────────────
 
-/// 界面主题。
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum Theme {
-    #[default]
-    Light,
-    Dark,
-}
+/// 内置主题 ID 常量。
+#[allow(dead_code)]
+pub const THEME_LIGHT: &str = "light";
+#[allow(dead_code)]
+pub const THEME_DARK: &str = "dark";
 
 /// 应用设置。
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -21,13 +18,17 @@ pub struct Settings {
     /// 当前语言代码（与 rust-i18n locale 对应：en / zh-CN / zh-TW）。
     #[serde(default = "default_locale")]
     pub locale: String,
-    /// 当前主题。
-    #[serde(default)]
-    pub theme: Theme,
+    /// 当前主题 ID（如 "light" / "dark" / 自定义扩展 ID）。
+    #[serde(default = "default_theme")]
+    pub theme: String,
 }
 
 fn default_locale() -> String {
     "en".to_string()
+}
+
+fn default_theme() -> String {
+    THEME_LIGHT.to_string()
 }
 
 /// 设置文件路径：`<data_dir>/settings.json`

@@ -1,24 +1,27 @@
-//! 设置界面（Safari 风格顶栏 Tab 布局）
+//! 设置界面（Zed 风格侧边栏布局）
 //!
-//! 布局仿照 macOS Safari 的偏好设置窗口：
-//! - 顶部水平图标标签栏（General / Appearance），选中项蓝色高亮 + 下划线。
-//! - 下方内容区显示当前分类的设置行（label + description + control）。
+//! 布局参考 Zed 的设置窗口（`crates/settings_ui/src/settings_ui.rs`）：
+//! - 左侧导航栏：分类列表（icon + label），选中项高亮。
+//! - 右侧内容区：分类标题 + 设置行（label + description + control）。
 //!
-//! 设置行布局参考 Zed 源码的 `render_settings_item_layout()`（h_flex + justify_between）。
+//! 所有配色通过 `crate::styles::ThemeColors` 获取，跟随当前主题（浅色/深色）。
 //!
 //! 当前提供两项可交互设置：
 //! - **General** 分类：语言（en / zh-CN / zh-TW），切换后全局生效。
 //! - **Appearance** 分类：主题（浅色 / 深色），持久化到 `data/settings.json`。
 
 use gpui::{
-    App, ClickEvent, Context, FontWeight, Render, SharedString, Window, div, rgb,
+    anchored, deferred, App, ClickEvent, Context, Corner, FontWeight, MouseButton, Pixels, Point,
+    Render, SharedString, Window, div, px, point, rgba,
 };
 use gpui::prelude::*;
 use rust_i18n::t;
 
-use crate::data::{load_settings, save_settings, Settings, Theme};
+use crate::data::{load_settings, save_settings, Settings};
+use crate::extension;
+use crate::styles::ThemeColors;
 
-// ──── 分类（顶部标签栏） ──────────────────────────────────
+// ──── 分类（侧边栏导航） ──────────────────────────────────
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum SettingsCategory {
@@ -71,6 +74,10 @@ fn locale_display_name(code: &str) -> &'static str {
 pub struct SettingsView {
     settings: Settings,
     selected_category: SettingsCategory,
+    /// 语言下拉是否展开（悬浮菜单）。
+    locale_dropdown_open: bool,
+    /// 语言下拉锚点（窗口坐标，点击语言行时记录）。
+    locale_dropdown_anchor: Point<Pixels>,
 }
 
 impl SettingsView {
@@ -79,18 +86,29 @@ impl SettingsView {
         Self {
             settings,
             selected_category: SettingsCategory::General,
+            locale_dropdown_open: false,
+            locale_dropdown_anchor: point(px(0.), px(0.)),
         }
     }
 
     // ── 状态修改 ──
 
-    fn choose_locale(&mut self, code: &str) {
-        self.settings.locale = code.to_string();
-        save_settings(&self.settings);
+    /// 展开/收起语言下拉菜单（记录点击位置作为悬浮锚点）。
+    fn toggle_locale_dropdown(&mut self, anchor: Point<Pixels>, cx: &mut Context<Self>) {
+        self.locale_dropdown_anchor = anchor;
+        self.locale_dropdown_open = !self.locale_dropdown_open;
+        cx.notify();
     }
 
-    fn choose_theme(&mut self, theme: Theme) {
-        self.settings.theme = theme;
+    /// 从下拉菜单选中语言并收起。
+    fn select_locale(&mut self, code: &str) {
+        self.settings.locale = code.to_string();
+        save_settings(&self.settings);
+        self.locale_dropdown_open = false;
+    }
+
+    fn choose_theme(&mut self, theme: &str) {
+        self.settings.theme = theme.to_string();
         save_settings(&self.settings);
     }
 
@@ -100,14 +118,23 @@ impl SettingsView {
 
     // ── 子区域渲染 ──
 
-    /// 渲染「General」内容：语言选择行。
+    /// 渲染「General」内容：语言选择行（点击展开悬浮下拉菜单）。
     fn render_general(
         &self,
         this: gpui::Entity<SettingsView>,
-        _cx: &mut Context<Self>,
+        c: &ThemeColors,
     ) -> impl IntoElement {
         let locale = self.settings.locale.clone();
         let current_name = locale_display_name(&locale);
+
+        // 点击语言行：切换悬浮下拉展开
+        let on_toggle = {
+            let this = this.clone();
+            move |event: &ClickEvent, _: &mut Window, cx: &mut App| {
+                let pos = event.position();
+                let _ = this.update(cx, |this, cx| this.toggle_locale_dropdown(pos, cx));
+            }
+        };
 
         div()
             .flex_col()
@@ -117,55 +144,92 @@ impl SettingsView {
                 div()
                     .text_sm()
                     .font_weight(FontWeight::MEDIUM)
-                    .text_color(rgb(0x888888))
+                    .text_color(c.text_muted)
                     .child(t!("settings.general_settings").to_string()),
             )
-            // 语言行
-            .child(setting_row(
-                t!("settings.language").to_string(),
-                t!("settings.language_desc").to_string(),
-                // 控件：当前语言名 + 下拉箭头（点击循环切换）
+            // 语言项（点击展开悬浮下拉）
+            .child(
                 div()
                     .flex()
-                    .items_center()
+                    .flex_col()
                     .gap_1()
-                    .px_3()
-                    .py_1p5()
-                    .rounded_md()
-                    .bg(rgb(0x0a84ff))
-                    .text_color(rgb(0xffffff))
-                    .cursor_pointer()
-                    .child(SharedString::from(current_name))
-                    .child(" \u{25BE}") // ▾
-                    .into_any_element(),
-                {
-                    let this = this.clone();
-                    move |_, _, cx: &mut App| {
-                        // 循环切换到下一个语言
-                        let current_idx = LOCALES
-                            .iter()
-                            .position(|(c, _)| *c == locale)
-                            .unwrap_or(0);
-                        let next_idx = (current_idx + 1) % LOCALES.len();
-                        let next_code = LOCALES[next_idx].0;
-
-                        cx.update_entity::<SettingsView, ()>(&this, |this, _| {
-                            this.choose_locale(next_code);
-                        });
-                        apply_locale(next_code, cx);
-                        cx.notify(this.entity_id());
-                    }
-                },
-            ))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .items_center()
+                            .justify_between()
+                            .py_3()
+                            .border_b_1()
+                            .border_color(c.border)
+                            .cursor_pointer()
+                            .id("setting-language")
+                            .on_click(on_toggle)
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .gap_0p5()
+                                    .child(
+                                        div()
+                                            .text_base()
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .child(t!("settings.language").to_string()),
+                                    )
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .text_color(c.text_muted)
+                                            .child(t!("settings.language_desc").to_string()),
+                                    ),
+                            )
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_1()
+                                    .px_3()
+                                    .py_1p5()
+                                    .rounded_md()
+                                    .bg(c.accent)
+                                    .text_color(c.selected_text)
+                                    .child(SharedString::from(current_name))
+                                    .child(SharedString::from(" \u{25BE}")),
+                            ),
+                    ),
+            )
     }
 
     /// 渲染「Appearance」内容：主题选择行。
     fn render_appearance(
         &self,
         this: gpui::Entity<SettingsView>,
-        _cx: &mut Context<Self>,
+        c: &ThemeColors,
     ) -> impl IntoElement {
-        let is_light = self.settings.theme == Theme::Light;
+        let current_theme = self.settings.theme.clone();
+        let theme_list = extension::ExtensionHost::shared().theme_list();
+
+        // 动态构建主题药丸按钮列表
+        let mut pills = div().flex().gap_2();
+        for (theme_id, theme_name) in &theme_list {
+            let is_selected = *theme_id == current_theme;
+            let tid = theme_id.to_string();
+            let pill_this = this.clone();
+
+            pills = pills.child(theme_pill(
+                theme_id,
+                theme_name.to_string(),
+                is_selected,
+                c,
+                move |_, _, cx: &mut App| {
+                    cx.update_entity::<SettingsView, ()>(&pill_this, |this, _| {
+                        this.choose_theme(&tid);
+                    });
+                    apply_theme(cx);
+                    cx.notify(pill_this.entity_id());
+                },
+            ));
+        }
 
         div()
             .flex_col()
@@ -175,174 +239,222 @@ impl SettingsView {
                 div()
                     .text_sm()
                     .font_weight(FontWeight::MEDIUM)
-                    .text_color(rgb(0x888888))
+                    .text_color(c.text_muted)
                     .child(t!("settings.appearance_settings").to_string()),
             )
             // 主题行
             .child(setting_row(
+                "setting-theme",
                 t!("settings.theme").to_string(),
                 t!("settings.theme_desc").to_string(),
-                // 控件：Light / Dark 双按钮
-                {
-                    let light_this = this.clone();
-                    let dark_this = this.clone();
-                    div()
-                        .flex()
-                        .gap_2()
-                        .child(theme_pill(
-                            t!("settings.light").to_string(),
-                            is_light,
-                            {
-                                let this = light_this;
-                                move |_, _, cx: &mut App| {
-                                    cx.update_entity::<SettingsView, ()>(&this, |this, _| {
-                                        this.choose_theme(Theme::Light);
-                                    });
-                                    cx.notify(this.entity_id());
-                                }
-                            },
-                        ))
-                        .child(theme_pill(
-                            t!("settings.dark").to_string(),
-                            !is_light,
-                            {
-                                let this = dark_this;
-                                move |_, _, cx: &mut App| {
-                                    cx.update_entity::<SettingsView, ()>(&this, |this, _| {
-                                        this.choose_theme(Theme::Dark);
-                                    });
-                                    cx.notify(this.entity_id());
-                                }
-                            },
-                        ))
-                        .into_any_element()
-                },
-                // 点击整行时也切换主题（辅助操作）
-                {
-                    let this = this.clone();
-                    move |_, _, cx: &mut App| {
-                        let target = if is_light { Theme::Dark } else { Theme::Light };
-                        cx.update_entity::<SettingsView, ()>(&this, |this, _| {
-                            this.choose_theme(target);
-                        });
-                        cx.notify(this.entity_id());
-                    }
-                },
+                c,
+                pills.into_any_element(),
+                // 点击整行时不做操作（多主题时无法简单切换）
+                move |_, _, _| {},
             ))
     }
 }
 
 impl Render for SettingsView {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let this = cx.entity();
         let selected = self.selected_category;
-
-        // ── 配色（浅色基底，匹配 Safari 截图风格） ──
-        let bg_window = rgb(0xf6f6f6);       // 窗口背景（浅灰）
-        let bg_tab_bar = rgb(0xf6f6f6);      // 标签栏背景（同窗口）
-        let fg_primary = rgb(0x1d1d1f);      // 主文字（深黑）
-        let _fg_muted = rgb(0x86868b);        // 次要文字（灰，预留）
-        let accent = rgb(0x0066cc);          // 强调蓝（Safari 风格）
-        let _border_color = rgb(0xd2d2d7);    // 分隔线（浅灰）
-        let tab_selected_fg = rgb(0x0066cc); // 选中标签文字蓝
-        let tab_inactive_fg = rgb(0x555555); // 未选中标签灰
+        let c = ThemeColors::current();
 
         div()
             .size_full()
             .flex()
-            .flex_col()
-            .bg(bg_window)
-            .text_color(fg_primary)
-            // ═══ 顶部标签栏 ═══
+            .flex_row()
+            .bg(c.window_bg)
+            .text_color(c.text_primary)
+            // ═══ 左侧导航栏 ═══
             .child(
                 div()
-                    .w_full()
+                    .w(px(200.))
+                    .h_full()
                     .flex()
-                    .flex_row()
-                    .items_end()             // 标签底部对齐（下划线对齐）
-                    .gap_6()
-                    .px_6()
-                    .pt_4()
-                    .pb_0()
-                    .bg(bg_tab_bar)
-                    .border_b_1()
-                    .border_color(rgb(0xd2d2d7))
-                    // 各分类标签
-                    .children(SettingsCategory::ALL.iter().map(|(cat, _key)| {
-                        let is_active = *cat == selected;
-                        let cat_label = cat.label();
-                        let cat_icon = cat.icon();
-                        let cat_value = *cat;
-                        let tab_this = this.clone();
+                    .flex_col()
+                    .bg(c.sidebar_bg)
+                    .border_r_1()
+                    .border_color(c.border)
+                    .pt_3()
+                    // 分类列表
+                    .child({
+                        let mut list = div().flex().flex_col().gap_0p5().px_2();
+                        for (cat, _key) in SettingsCategory::ALL.iter() {
+                            let is_active = *cat == selected;
+                            let cat_label = cat.label();
+                            let cat_icon = cat.icon();
+                            let cat_value = *cat;
+                            let row_this = this.clone();
 
-                        let mut tab = div()
-                            .flex()
-                            .flex_col()
-                            .items_center()
-                            .gap_1()
-                            .pb_2()
-                            .cursor_pointer();
+                            let mut item = div()
+                                .w_full()
+                                .px_3()
+                                .py_2()
+                                .flex()
+                                .flex_row()
+                                .items_center()
+                                .gap_2()
+                                .rounded_md()
+                                .cursor_pointer();
 
-                        if is_active {
-                            tab = tab
-                                .text_color(tab_selected_fg)
-                                .font_weight(FontWeight::MEDIUM)
-                                .border_b_2()
-                                .border_color(accent);
-                        } else {
-                            tab = tab
-                                .text_color(tab_inactive_fg);
-                        }
+                            if is_active {
+                                item = item.bg(c.nav_active_bg).text_color(c.selected_text);
+                            } else {
+                                item = item.text_color(c.text_muted);
+                            }
 
-                        // 图标 + 标签（链式调用避免 move）
-                        tab = tab
-                            .child(
-                                div()
-                                    .text_2xl()
-                                    .child(cat_icon),
-                            )
-                            .child(
-                                div()
-                                    .text_xs()
-                                    .child(cat_label),
-                            );
-
-                        // 点击切换分类（先注册 on_click 再返回完整元素）
-                        {
-                            let mut tab_with_click = tab;
-                            tab_with_click.interactivity().on_click(move |_event: &ClickEvent, _window: &mut Window, cx: &mut App| {
-                                cx.update_entity::<SettingsView, ()>(
-                                    &tab_this,
-                                    |this, _| this.select_category(cat_value),
+                            item = item
+                                .child(
+                                    div()
+                                        .text_lg()
+                                        .child(cat_icon),
+                                )
+                                .child(
+                                    div()
+                                        .text_sm()
+                                        .child(cat_label),
                                 );
-                                cx.notify(tab_this.entity_id());
-                            });
-                            tab_with_click
+
+                            {
+                                let nav_id: &'static str = match cat_value {
+                                    SettingsCategory::General => "nav-general",
+                                    SettingsCategory::Appearance => "nav-appearance",
+                                };
+                                let clickable = item.id(nav_id).on_click(
+                                    move |_event: &ClickEvent, _window: &mut Window, cx: &mut App| {
+                                        cx.update_entity::<SettingsView, ()>(
+                                            &row_this,
+                                            |this, _| this.select_category(cat_value),
+                                        );
+                                        cx.notify(row_this.entity_id());
+                                    },
+                                );
+                                list = list.child(clickable);
+                            }
                         }
-                    })),
+                        list
+                    })
+                    // 底部弹性填充
+                    .child(div().flex_1()),
             )
-            // ═══ 内容区 ═══
+            // ═══ 右侧内容区 ═══
             .child(
                 div()
                     .flex_1()
-                    .px_6()
-                    .py_5()
+                    .h_full()
                     .flex()
                     .flex_col()
-                    // 根据 selected_category 渲染不同内容
-                    .child(match selected {
-                        SettingsCategory::General => self.render_general(this.clone(), cx).into_any_element(),
-                        SettingsCategory::Appearance => self.render_appearance(this.clone(), cx).into_any_element(),
-                    }),
+                    .bg(c.content_bg)
+                    .child(
+                        div()
+                            .flex_1()
+                            .px_8()
+                            .py_6()
+                            .flex()
+                            .flex_col()
+                            .gap_1()
+                            // 分类大标题
+                            .child(
+                                div()
+                                    .text_xl()
+                                    .font_weight(FontWeight::BOLD)
+                                    .mb_4()
+                                    .child(selected.label()),
+                            )
+                            // 根据 selected_category 渲染不同内容
+                            .child(match selected {
+                                SettingsCategory::General => self.render_general(this.clone(), &c).into_any_element(),
+                                SettingsCategory::Appearance => self.render_appearance(this.clone(), &c).into_any_element(),
+                            }),
+                    ),
             )
+            // ═══ 语言悬浮下拉（浮在内容上方，不撑开布局） ═══
+            .when(self.locale_dropdown_open, |root| {
+                let c = c.clone();
+                let viewport = window.viewport_size();
+                let locale_now = self.settings.locale.clone();
+                let this2 = this.clone();
+                // 遮罩：点外部关闭
+                let backdrop = deferred(
+                    anchored()
+                        .position(point(px(0.), px(0.)))
+                        .child(
+                            div()
+                                .id("locale-dropdown-backdrop")
+                                .w(viewport.width)
+                                .h(viewport.height)
+                                .bg(rgba(0x00000000))
+                                .on_mouse_down(MouseButton::Left, {
+                                    let t = this2.clone();
+                                    move |_, _, cx: &mut App| {
+                                        let _ = t.update(cx, |this, cx| {
+                                            this.locale_dropdown_open = false;
+                                            cx.notify();
+                                        });
+                                    }
+                                }),
+                        ),
+                );
+                // 面板
+                let panel = deferred(
+                    anchored()
+                        .anchor(Corner::TopLeft)
+                        .position(self.locale_dropdown_anchor)
+                        .child(
+                            div()
+                                .id("locale-dropdown-panel")
+                                .flex()
+                                .flex_col()
+                                .min_w(px(180.))
+                                .rounded_md()
+                                .border_1()
+                                .border_color(c.border)
+                                .bg(c.content_bg)
+                                .overflow_hidden()
+                                .children(LOCALES.iter().copied().map(|(code, name)| {
+                                    let selected = locale_now == code;
+                                    let t = this2.clone();
+                                    let code_str = code.to_string();
+                                    div()
+                                        .id(SharedString::from(format!("locale-opt-{code}")))
+                                        .px_3()
+                                        .py_1p5()
+                                        .text_sm()
+                                        .text_color(if selected { c.accent } else { c.text_primary })
+                                        .hover(|s| s.bg(c.button_hover_bg))
+                                        .child(SharedString::from(name))
+                                        .on_click(move |_, _, cx: &mut App| {
+                                            let _ = t.update(cx, |this, _| this.select_locale(&code_str));
+                                            apply_locale(&code_str, cx);
+                                            cx.notify(t.entity_id());
+                                        })
+                                })),
+                        ),
+                )
+                .with_priority(1);
+                root.child(backdrop).child(panel)
+            })
     }
 }
 
-// ──── 全局 locale 广播 ──────────────────────────────────────────
+// ──── 全局广播 ──────────────────────────────────────────────
 
+/// 切换语言后广播：改全局 locale + 重建菜单 + 刷新所有窗口。
 fn apply_locale(code: &str, cx: &mut App) {
     rust_i18n::set_locale(code);
     cx.set_menus(crate::app_menus::app_menus());
+    refresh_all_windows(cx);
+}
+
+/// 切换主题后广播：刷新所有窗口（让 Welcome 等其他窗口也跟随新主题）。
+fn apply_theme(cx: &mut App) {
+    refresh_all_windows(cx);
+}
+
+/// 遍历所有已开窗口，逐个 refresh（触发重渲染）。
+fn refresh_all_windows(cx: &mut App) {
     for handle in cx.windows() {
         let _ = handle.update(cx, |_, window, _| window.refresh());
     }
@@ -354,13 +466,18 @@ fn apply_locale(code: &str, cx: &mut App) {
 ///
 /// 布局参考 Zed 源码的 `render_settings_item_layout()`：
 /// `h_flex().justify_between()`，左侧 `v_flex()` 放标题+描述，右侧放控件。
+///
+/// 注意：`id` 必须唯一且为 `'static`，因为 GPUI 0.2.2 的 `on_click` 派发依赖
+/// element 拥有 `element_id`（否则命中测试拿不到 `InteractiveElementState`，点击永不触发）。
 fn setting_row(
+    id: &'static str,
     label: String,
     desc: String,
+    c: &ThemeColors,
     control: impl IntoElement,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
-    let mut el = div()
+    div()
         .w_full()
         .flex()
         .flex_row()
@@ -368,7 +485,7 @@ fn setting_row(
         .justify_between()
         .py_3()
         .border_b_1()
-        .border_color(rgb(0xd2d2d7))
+        .border_color(c.border)
         .cursor_pointer()
         // 左侧：标签 + 描述
         .child(
@@ -385,21 +502,22 @@ fn setting_row(
                 .child(
                     div()
                         .text_sm()
-                        .text_color(rgb(0x888888))
+                        .text_color(c.text_muted)
                         .child(desc),
                 ),
         )
         // 右侧：控件
-        .child(control);
-
-    el.interactivity().on_click(on_click);
-    el
+        .child(control)
+        .id(id)
+        .on_click(on_click)
 }
 
 /// 主题选择的小药丸按钮（选中=实心蓝，未选中=描边）。
 fn theme_pill(
+    theme_id: &str,
     label: String,
     selected: bool,
+    c: &ThemeColors,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
     let mut el = div()
@@ -411,18 +529,14 @@ fn theme_pill(
         .child(label);
 
     if selected {
-        el = el.bg(rgb(0x0066cc)).text_color(rgb(0xffffff));
+        el = el.bg(c.accent).text_color(c.selected_text);
     } else {
         el = el
             .border_1()
-            .border_color(rgb(0xcccccc))
-            .text_color(fg_pill_inactive());
+            .border_color(c.pill_border)
+            .text_color(c.pill_text);
     }
 
-    el.interactivity().on_click(on_click);
-    el
-}
-
-fn fg_pill_inactive() -> gpui::Rgba {
-    rgb(0x333333)
+    el.id(SharedString::from(format!("theme-{theme_id}")))
+        .on_click(on_click)
 }

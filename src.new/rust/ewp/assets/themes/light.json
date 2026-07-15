@@ -1,0 +1,19 @@
+{
+  "name": "EWP Light",
+  "colors": {
+    "window_bg": "#ffffff",
+    "sidebar_bg": "#f8f9fa",
+    "content_bg": "#ffffff",
+    "text_primary": "#1d1d1f",
+    "text_muted": "#86868b",
+    "accent": "#007aff",
+    "border": "#d2d2d7",
+    "button_bg": "#f0f0f2",
+    "button_hover_bg": "#e5e5ea",
+    "selected_bg": "#007aff",
+    "selected_text": "#ffffff",
+    "pill_border": "#cccccc",
+    "pill_text": "#333333",
+    "nav_active_bg": "#007aff"
+  }
+}

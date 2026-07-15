@@ -1,0 +1,19 @@
+{
+  "name": "EWP Dark",
+  "colors": {
+    "window_bg": "#1e1e1e",
+    "sidebar_bg": "#252526",
+    "content_bg": "#1e1e1e",
+    "text_primary": "#cccccc",
+    "text_muted": "#888888",
+    "accent": "#0a84ff",
+    "border": "#333333",
+    "button_bg": "#2a2a2a",
+    "button_hover_bg": "#3a3a3a",
+    "selected_bg": "#0a84ff",
+    "selected_text": "#ffffff",
+    "pill_border": "#555555",
+    "pill_text": "#bbbbbb",
+    "nav_active_bg": "#093d60"
+  }
+}

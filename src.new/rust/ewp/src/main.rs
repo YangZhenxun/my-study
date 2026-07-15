@@ -2,8 +2,10 @@ mod app_menus;
 mod data;
 mod editor_view;
 mod ewp_actions;
+mod extension;
 mod model;
 mod settings_view;
+mod styles;
 
 use data::AppData;
 use editor_view::EditorView;
@@ -11,11 +13,12 @@ use ewp_actions::*;
 use gpui::{
     App, Application, AssetSource, Bounds, ClickEvent, Context, FontWeight, KeyBinding,
     PathPromptOptions, Render, SharedString, TitlebarOptions, Window, WindowBounds, WindowOptions,
-    div, img, prelude::*, px, rgb, rgba, size, svg,
+    div, img, prelude::*, px, rgba, size, svg,
 };
 use model::Model;
 use rust_i18n::t;
 use settings_view::SettingsView;
+use styles::ThemeColors;
 use std::path::PathBuf;
 
 // 编译期加载 locales/ 目录下的 YAML 翻译文件，fallback 到英文
@@ -69,11 +72,13 @@ struct Welcome {
 
 impl Render for Welcome {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let c = ThemeColors::current();
+
         div()
             .flex()
             .flex_row()
             .size_full()
-            .bg(rgb(0xffffff))
+            .bg(c.window_bg)
             .overflow_hidden()
             // ═══ 左栏 ═══
             .child(
@@ -97,14 +102,14 @@ impl Render for Welcome {
                         div()
                             .text_2xl()
                             .font_weight(FontWeight::BOLD)
-                            .text_color(rgb(0x1d1d1f))
+                            .text_color(c.text_primary)
                             .mt(px(-4.))
                             .child(t!("welcome.title").to_string()),
                     )
                     .child(
                         div()
                             .text_sm()
-                            .text_color(rgb(0x86868b))
+                            .text_color(c.text_muted)
                             .child(t!("welcome.version").to_string()),
                     )
                     .child({
@@ -119,12 +124,14 @@ impl Render for Welcome {
                                 "new",
                                 "plus",
                                 t!("welcome.create_new_project").to_string(),
+                                &c,
                                 move |_event, _window, cx| create_new_project(cx),
                             ))
                             .child(action_button(
                                 "open",
                                 "folder",
                                 t!("welcome.open_project").to_string(),
+                                &c,
                                 {
                                     let this = this.clone();
                                     move |_event, _window, cx| {
@@ -146,7 +153,7 @@ impl Render for Welcome {
                     .pb(px(20.))
                     .pr(px(24.))
                     .pl(px(16.))
-                    .bg(rgb(0xf8f9fa))
+                    .bg(c.sidebar_bg)
                     .children({
                         let this = cx.weak_entity();
                         self.data
@@ -155,7 +162,7 @@ impl Render for Welcome {
                             .enumerate()
                             .map(|(i, doc)| {
                                 let path = doc.path.clone();
-                                recent_item(self.selected == Some(i), i, doc, {
+                                recent_item(self.selected == Some(i), i, doc, &c, {
                                     let this = this.clone();
                                     let path = path.clone();
                                     move |_event, _window, cx| {
@@ -175,7 +182,7 @@ impl Render for Welcome {
                                 .items_center()
                                 .justify_center()
                                 .text_sm()
-                                .text_color(rgb(0x86868b))
+                                .text_color(c.text_muted)
                                 .child(t!("welcome.no_recent").to_string()),
                         )
                     }),
@@ -195,6 +202,7 @@ fn action_button(
     id: &'static str,
     icon_name: &'static str,
     label: String,
+    c: &ThemeColors,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
     div()
@@ -207,17 +215,17 @@ fn action_button(
         .px_4()
         .py_2p5()
         .rounded_lg()
-        .bg(rgb(0xf0f0f2))
+        .bg(c.button_bg)
         .cursor_pointer()
         .text_base()
-        .text_color(rgb(0x1d1d1f))
-        .hover(|s| s.bg(rgb(0xe5e5ea)))
+        .text_color(c.text_primary)
+        .hover(|s| s.bg(c.button_hover_bg))
         .child(
             svg()
                 .path(icon_path(icon_name))
                 .w(px(18.))
                 .h(px(18.))
-                .text_color(rgb(0x86868b)),
+                .text_color(c.text_muted),
         )
         .child(div().flex_1().child(SharedString::from(label)))
         .on_click(on_click)
@@ -227,23 +235,24 @@ fn recent_item(
     is_selected: bool,
     id: usize,
     doc: &data::RecentDoc,
+    c: &ThemeColors,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
     let bg = if is_selected {
-        rgb(0x007aff)
+        c.selected_bg
     } else {
-        rgba(0xffffff00)
+        rgba(0x00000000)
     };
     let name_color = if is_selected {
-        rgb(0xffffff)
+        c.selected_text
     } else {
-        rgb(0x1d1d1f)
+        c.text_primary
     };
-    let path_color = rgb(0x86868b);
+    let path_color = c.text_muted;
     let icon_color = if is_selected {
-        rgb(0xffffff)
+        c.selected_text
     } else {
-        rgb(0x007aff)
+        c.accent
     };
 
     div()
@@ -295,7 +304,12 @@ fn recent_item(
 /// 统一的「打开编辑器窗口」入口：内存文档，不写磁盘（保存弹窗以后再做）。
 /// - name：窗口标题（如 "Untitled" / 文件名）。
 /// - model：若提供则以其内容初始化（来自 .ewp），否则空白。
-fn open_editor(cx: &mut App, name: SharedString, model: Option<Model>) {
+fn open_editor(
+    cx: &mut App,
+    name: SharedString,
+    model: Option<Model>,
+    path: Option<PathBuf>,
+) {
     let bounds = Bounds::centered(None, size(px(900.), px(620.)), cx);
     let _ = cx.open_window(
         WindowOptions {
@@ -310,8 +324,9 @@ fn open_editor(cx: &mut App, name: SharedString, model: Option<Model>) {
         move |_, app| {
             app.new(|entity_cx| {
                 let n = name.clone();
+                let p = path.clone();
                 match &model {
-                    Some(m) => EditorView::new_from_model(entity_cx, n, m.clone()),
+                    Some(m) => EditorView::new_from_model(entity_cx, n, m.clone(), p),
                     None => EditorView::new_blank(entity_cx, n),
                 }
             })
@@ -322,7 +337,7 @@ fn open_editor(cx: &mut App, name: SharedString, model: Option<Model>) {
 
 /// 「新建项目」：打开一个空白编辑器窗口（内存文档，不写磁盘）。
 fn create_new_project(cx: &mut App) {
-    open_editor(cx, "Untitled".into(), None);
+    open_editor(cx, "Untitled".into(), None, None);
 }
 
 /// 「打开项目」：弹出系统文件选择器，选中后打开编辑器（.ewp 会真正加载模型）。
@@ -370,7 +385,12 @@ fn open_project(this: Option<gpui::WeakEntity<Welcome>>, cx: &mut App) {
                         });
                         app.notify(id);
                     }
-                    open_editor(app, name.clone(), model);
+                    let save_path = if model.is_some() {
+                Some(path.clone())
+            } else {
+                None
+            };
+            open_editor(app, name.clone(), model, save_path);
                 });
             }
         }
@@ -402,7 +422,12 @@ fn open_recent(this: gpui::WeakEntity<Welcome>, index: usize, path: String, cx: 
     } else {
         None
     };
-    open_editor(cx, name, model);
+    let save_path = if model.is_some() {
+        Some(pathbuf.clone())
+    } else {
+        None
+    };
+    open_editor(cx, name, model, save_path);
 }
 
 /// 「设置」：打开独立设置窗口。
@@ -529,9 +554,6 @@ fn main() {
     rust_i18n::set_locale(&locale);
 
     let app_data = data::load();
-
-    // 验证原生文档模型骨架的序列化 round-trip（写空文档到磁盘再读回）
-    model::ser::demo();
 
     eprintln!("[EWP] Data directory: {}", data::data_dir().display());
 

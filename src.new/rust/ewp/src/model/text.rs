@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::model::common::{Id, TextStyle};
 
 /// 带样式的连续文本片段。
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct Run {
     pub text: String,
     #[serde(default)]
@@ -21,7 +21,7 @@ pub struct Run {
 }
 
 /// 普通段落。
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct Paragraph {
     pub runs: Vec<Run>,
     #[serde(default)]

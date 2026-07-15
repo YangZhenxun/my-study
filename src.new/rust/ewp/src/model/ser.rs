@@ -57,21 +57,23 @@ pub fn load<T: DeserializeOwned>(path: &Path, fmt: NativeFormat) -> Result<T, St
     }
 }
 
-/// 演示：构造一个空 `Document`，序列化到磁盘再读回，验证 round-trip。
-/// 由 `main()` 在启动时调用，仅打印日志，不影响欢迎窗口。
+/// 开发期手动 round-trip 测试：构造一个空 `Document`，序列化到磁盘再读回。
+/// 不在启动时自动调用（避免相对路径 `data/` 不存在时刷屏 ENOENT 报错）；
+/// 需要时手动调用即可。用 `data::data_dir()` 而非相对路径，确保目录存在。
+#[allow(dead_code)]
 pub fn demo() {
     use crate::model::text::Document;
 
     let doc = Document::default();
     let model = Model::Text(doc);
-    let path = std::path::Path::new("data/sample_document.ewp");
+    let path = crate::data::data_dir().join("sample_document.ewp");
 
-    match save(&model, path, NativeFormat::Json) {
+    match save(&model, &path, NativeFormat::Json) {
         Ok(()) => println!("[EWP] model saved -> {}", path.display()),
         Err(e) => eprintln!("[EWP] model save failed: {e}"),
     }
 
-    match load::<Model>(path, NativeFormat::Json) {
+    match load::<Model>(&path, NativeFormat::Json) {
         Ok(_) => println!("[EWP] model round-trip OK"),
         Err(e) => eprintln!("[EWP] model load failed: {e}"),
     }

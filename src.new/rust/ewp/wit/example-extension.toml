@@ -1,0 +1,20 @@
+# 示例：Word 文档扩展清单
+#
+# 放在 data/extensions/word-renderer/extension.toml
+# 配合 WASM 模块使用（lib 指向 .wasm 文件）
+
+id = "word-renderer"
+name = "Word Document Renderer"
+version = "0.1.0"
+schema_version = 1
+description = "Parse, layout, and render Word documents"
+authors = ["EWP Team"]
+
+# WASM 模块路径（编译目标：wasm32-wasip2）
+lib = "target/wasm32-wasip2/release/word_ext.wasm"
+
+# 声明此扩展处理 "text" 类型文档
+[[documents]]
+kind = "text"
+extensions = ["docx", "doc"]
+default_extension = "docx"
