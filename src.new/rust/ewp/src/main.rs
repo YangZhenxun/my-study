@@ -5,15 +5,20 @@ mod ewp_actions;
 mod extension;
 mod model;
 mod settings_view;
+mod sheet_view;
+mod slide_view;
 mod styles;
 
 use data::AppData;
 use editor_view::EditorView;
 use ewp_actions::*;
+use sheet_view::SheetView;
+use slide_view::SlideView;
 use gpui::{
-    App, Application, AssetSource, Bounds, ClickEvent, Context, FontWeight, KeyBinding,
-    PathPromptOptions, Render, SharedString, TitlebarOptions, Window, WindowBounds, WindowOptions,
-    div, img, prelude::*, px, rgba, size, svg,
+    anchored, deferred, App, Application, AssetSource, Bounds, ClickEvent, Context, Corner,
+    DefiniteLength, FontWeight, KeyBinding, MouseButton, MouseDownEvent, PathPromptOptions, Pixels,
+    Point, Render, SharedString, TitlebarOptions, Window, WindowBounds, WindowOptions, div, img,
+    point, prelude::*, px, rgba, size, svg,
 };
 use model::Model;
 use rust_i18n::t;
@@ -68,11 +73,16 @@ struct Welcome {
     data: AppData,
     /// 当前选中的最近项索引（点击列表项时移动高亮）。
     selected: Option<usize>,
+    /// 右键上下文菜单状态：`Some((最近项索引, 锚点位置, 路径))`。
+    context_menu: Option<(usize, Point<Pixels>, String)>,
+    /// 删除项目确认弹窗状态：`Some((最近项索引, 路径))`。
+    confirm_delete: Option<(usize, String)>,
 }
 
 impl Render for Welcome {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let c = ThemeColors::current();
+        let viewport = _window.viewport_size();
 
         div()
             .flex()
@@ -80,12 +90,12 @@ impl Render for Welcome {
             .size_full()
             .bg(c.window_bg)
             .overflow_hidden()
-            // ═══ 左栏 ═══
+            // ═══ 左栏（60%） ═══
             .child(
                 div()
                     .flex()
                     .flex_col()
-                    .w(px(440.))
+                    .w(DefiniteLength::Fraction(0.6))
                     .h_full()
                     .pt(px(36.))
                     .pb_10()
@@ -125,7 +135,10 @@ impl Render for Welcome {
                                 "plus",
                                 t!("welcome.create_new_project").to_string(),
                                 &c,
-                                move |_event, _window, cx| create_new_project(cx),
+                                {
+                                    let this = this.clone();
+                                    move |_event, _window, cx| create_new_project(Some(this.clone()), cx)
+                                },
                             ))
                             .child(action_button(
                                 "open",
@@ -140,53 +153,365 @@ impl Render for Welcome {
                                     }
                                 },
                             ))
+                            .child(action_button(
+                                "new-presentation",
+                                "presentation",
+                                t!("welcome.create_presentation").to_string(),
+                                &c,
+                                {
+                                    let this = this.clone();
+                                    move |_event, _window, cx| {
+                                        create_new_presentation(Some(this.clone()), cx)
+                                    }
+                                },
+                            ))
+                            .child(action_button(
+                                "new-spreadsheet",
+                                "spreadsheet",
+                                t!("welcome.create_spreadsheet").to_string(),
+                                &c,
+                                {
+                                    let this = this.clone();
+                                    move |_event, _window, cx| {
+                                        create_new_spreadsheet(Some(this.clone()), cx)
+                                    }
+                                },
+                            ))
                     }),
             )
-            // ═══ 右栏 ═══
+            // ═══ 右栏（40%） ═══
             .child(
                 div()
                     .flex()
                     .flex_col()
-                    .flex_1()
+                    .w(DefiniteLength::Fraction(0.4))
                     .h_full()
                     .pt(px(28.))
                     .pb(px(20.))
                     .pr(px(24.))
                     .pl(px(16.))
                     .bg(c.sidebar_bg)
-                    .children({
-                        let this = cx.weak_entity();
-                        self.data
-                            .recent_docs
-                            .iter()
-                            .enumerate()
-                            .map(|(i, doc)| {
-                                let path = doc.path.clone();
-                                recent_item(self.selected == Some(i), i, doc, &c, {
-                                    let this = this.clone();
-                                    let path = path.clone();
-                                    move |_event, _window, cx| {
-                                        let this = this.clone();
-                                        let path = path.clone();
-                                        open_recent(this, i, path, cx)
+                    .child(
+                        // 列表容器：填满右栏全部剩余高度，让项目卡片动态分布。
+                        div()
+                            .flex()
+                            .flex_col()
+                            .flex_1()
+                            .gap_2()
+                            .children({
+                                let this = cx.weak_entity();
+                                self.data
+                                    .recent_docs
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, doc)| {
+                                        let path = doc.path.clone();
+                                        recent_item(
+                                            self.selected == Some(i),
+                                            i,
+                                            doc,
+                                            &c,
+                                            {
+                                                let this = this.clone();
+                                                let path = path.clone();
+                                                move |_event, _window, cx| {
+                                                    let this = this.clone();
+                                                    let path = path.clone();
+                                                    open_recent(this, i, path, cx)
+                                                }
+                                            },
+                                            {
+                                                let this = this.clone();
+                                                let path = path.clone();
+                                                move |event: &MouseDownEvent, _window, cx| {
+                                                    let this = this.clone();
+                                                    let anchor = event.position;
+                                                    let path = path.clone();
+                                                    let _ = this.update(cx, |this, cx| {
+                                                        this.context_menu =
+                                                            Some((i, anchor, path));
+                                                        cx.notify();
+                                                    });
+                                                }
+                                            },
+                                        )
+                                    })
+                                    .collect::<Vec<_>>()
+                            })
+                            .when(self.data.recent_docs.is_empty(), |list| {
+                                list.child(
+                                    div()
+                                        .flex()
+                                        .flex_1()
+                                        .items_center()
+                                        .justify_center()
+                                        .text_sm()
+                                        .text_color(c.text_muted)
+                                        .child(t!("welcome.no_recent").to_string()),
+                                )
+                            }),
+                    )
+            )
+            .when(self.context_menu.is_some(), |d| {
+                let (i, anchor, path) = self.context_menu.clone().unwrap();
+                let this = cx.weak_entity();
+                // 锚点夹在视口内，避免菜单跑到屏幕外（transparent 标题栏下坐标可能偏移）。
+                let mut anchor = anchor;
+                let menu_w = px(200.);
+                let menu_h = px(200.);
+                if anchor.x + menu_w > viewport.width {
+                    anchor.x = if viewport.width >= menu_w {
+                        viewport.width - menu_w
+                    } else {
+                        px(0.)
+                    };
+                }
+                if anchor.y + menu_h > viewport.height {
+                    anchor.y = if viewport.height >= menu_h {
+                        viewport.height - menu_h
+                    } else {
+                        px(0.)
+                    };
+                }
+                // 注意：不要用「全屏透明 backdrop」来关闭菜单——它会和面板争抢命中，
+                // 导致点菜单项时实际触发了 backdrop 的关闭 handler，菜单项 on_click 收不到。
+                // 改为在面板根用 on_mouse_down_out（点面板外部才关闭），与 gpui-component 的 PopupMenu 同款做法。
+                let panel = deferred(
+                    anchored()
+                        .anchor(Corner::TopLeft)
+                        .position(anchor)
+                        .child(
+                            div()
+                                .id("recent-ctx-panel")
+                                .on_mouse_down_out({
+                                    let t = this.clone();
+                                    move |_, _, cx: &mut App| {
+                                        let _ = t.update(cx, |this, cx| {
+                                            this.context_menu = None;
+                                            cx.notify();
+                                        });
                                     }
                                 })
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .when(self.data.recent_docs.is_empty(), |panel| {
-                        panel.child(
-                            div()
                                 .flex()
-                                .flex_1()
+                                .flex_col()
+                                .min_w(px(180.))
+                                .rounded_md()
+                                .border_1()
+                                .border_color(c.border)
+                                .bg(c.content_bg)
+                                .overflow_hidden()
+                                .child(ctx_menu_item(
+                                    "ctx-open",
+                                    t!("welcome.context_open").to_string(),
+                                    c,
+                                    {
+                                        let this = this.clone();
+                                        let path = path.clone();
+                                        move |_, _, cx| {
+                                            open_recent(this.clone(), i, path.clone(), cx);
+                                            let _ = this.update(cx, |this, cx| {
+                                                this.context_menu = None;
+                                                cx.notify();
+                                            });
+                                        }
+                                    },
+                                ))
+                                .child(ctx_menu_item(
+                                    "ctx-remove",
+                                    t!("welcome.context_remove").to_string(),
+                                    c,
+                                    {
+                                        let this = this.clone();
+                                        let path = path.clone();
+                                        move |_, _, cx| {
+                                            remove_from_recent(this.clone(), path.clone(), cx);
+                                        }
+                                    },
+                                ))
+                                .child(ctx_menu_item(
+                                    "ctx-delete",
+                                    t!("welcome.context_delete").to_string(),
+                                    c,
+                                    {
+                                        let this = this.clone();
+                                        let path = path.clone();
+                                        move |_, _, cx| {
+                                            let _ = this.update(cx, |this, cx| {
+                                                this.confirm_delete = Some((i, path.clone()));
+                                                this.context_menu = None;
+                                                cx.notify();
+                                            });
+                                        }
+                                    },
+                                ))
+                                .child(div().h(px(1.)).w_full().bg(c.border))
+                                .child(ctx_menu_item(
+                                    "ctx-new",
+                                    t!("welcome.context_new").to_string(),
+                                    c,
+                                    {
+                                        let this = this.clone();
+                                        move |_, _, cx| {
+                                            create_new_project(Some(this.clone()), cx);
+                                            let _ = this.update(cx, |this, cx| {
+                                                this.context_menu = None;
+                                                cx.notify();
+                                            });
+                                        }
+                                    },
+                                ))
+                                .child(ctx_menu_item(
+                                    "ctx-new-presentation",
+                                    t!("welcome.context_new_presentation").to_string(),
+                                    c,
+                                    {
+                                        let this = this.clone();
+                                        move |_, _, cx| {
+                                            create_new_presentation(Some(this.clone()), cx);
+                                            let _ = this.update(cx, |this, cx| {
+                                                this.context_menu = None;
+                                                cx.notify();
+                                            });
+                                        }
+                                    },
+                                ))
+                                .child(ctx_menu_item(
+                                    "ctx-new-spreadsheet",
+                                    t!("welcome.context_new_spreadsheet").to_string(),
+                                    c,
+                                    {
+                                        let this = this.clone();
+                                        move |_, _, cx| {
+                                            create_new_spreadsheet(Some(this.clone()), cx);
+                                            let _ = this.update(cx, |this, cx| {
+                                                this.context_menu = None;
+                                                cx.notify();
+                                            });
+                                        }
+                                    },
+                                ))
+                                .child(ctx_menu_item(
+                                    "ctx-open-other",
+                                    t!("welcome.context_open_other").to_string(),
+                                    c,
+                                    {
+                                        let this = this.clone();
+                                        move |_, _, cx| {
+                                            open_project(Some(this.clone()), cx);
+                                            let _ = this.update(cx, |this, cx| {
+                                                this.context_menu = None;
+                                                cx.notify();
+                                            });
+                                        }
+                                    },
+                                )),
+                        ),
+                )
+                .with_priority(1);
+                d.child(panel)
+            })
+            .when(self.confirm_delete.is_some(), |d| {
+                let (_, path) = self.confirm_delete.clone().unwrap();
+                let this = cx.weak_entity();
+                let panel_w = px(340.);
+                let backdrop = deferred(
+                    anchored()
+                        .position(point(px(0.), px(0.)))
+                        .child(
+                            div()
+                                .id("confirm-delete-backdrop")
+                                .w(viewport.width)
+                                .h(viewport.height)
+                                .bg(rgba(0x000000aa))
+                                .flex()
                                 .items_center()
                                 .justify_center()
-                                .text_sm()
-                                .text_color(c.text_muted)
-                                .child(t!("welcome.no_recent").to_string()),
-                        )
-                    }),
-            )
+                                .on_mouse_down(MouseButton::Left, {
+                                    let t = this.clone();
+                                    move |_, _, cx: &mut App| {
+                                        let _ = t.update(cx, |this, cx| {
+                                            this.confirm_delete = None;
+                                            cx.notify();
+                                        });
+                                    }
+                                })
+                                .child(
+                                    div()
+                                        .id("confirm-delete-panel")
+                                        .flex()
+                                        .flex_col()
+                                        .w(panel_w)
+                                        .rounded_xl()
+                                        .border_1()
+                                        .border_color(c.border)
+                                        .bg(c.content_bg)
+                                .overflow_hidden()
+                                .on_mouse_down(MouseButton::Left, |_, _, _| {})
+                                        .child(
+                                            div()
+                                                .px_5()
+                                                .pt_5()
+                                                .pb_3()
+                                                .text_base()
+                                                .font_weight(FontWeight::BOLD)
+                                                .text_color(c.text_primary)
+                                                .child(t!("welcome.confirm_delete_title").to_string()),
+                                        )
+                                        .child(
+                                            div()
+                                                .px_5()
+                                                .pb_3()
+                                                .text_sm()
+                                                .text_color(c.text_muted)
+                                                .child(format!(
+                                                    "{} {}",
+                                                    t!("welcome.confirm_delete_message").to_string(),
+                                                    path.clone()
+                                                )),
+                                        )
+                                        .child(
+                                            div()
+                                                .flex()
+                                                .flex_row()
+                                                .justify_end()
+                                                .gap_2()
+                                                .px_5()
+                                                .pb_4()
+                                                .pt_1()
+                                                .child(confirm_button(
+                                                    "confirm-cancel",
+                                                    t!("welcome.cancel").to_string(),
+                                                    c,
+                                                    false,
+                                                    {
+                                                        let t = this.clone();
+                                                        move |_, _, cx| {
+                                                            let _ = t.update(cx, |this, cx| {
+                                                                this.confirm_delete = None;
+                                                                cx.notify();
+                                                            });
+                                                        }
+                                                    },
+                                                ))
+                                                .child(confirm_button(
+                                                    "confirm-delete",
+                                                    t!("welcome.delete").to_string(),
+                                                    c,
+                                                    true,
+                                                    {
+                                                        let t = this.clone();
+                                                        let path = path.clone();
+                                                        move |_, _, cx| {
+                                                            delete_project(t.clone(), path.clone(), cx);
+                                                        }
+                                                    },
+                                                )),
+                                        ),
+                                ),
+                        ),
+                );
+                d.child(backdrop)
+            })
     }
 }
 
@@ -231,12 +556,14 @@ fn action_button(
         .on_click(on_click)
 }
 
+
 fn recent_item(
     is_selected: bool,
     id: usize,
     doc: &data::RecentDoc,
     c: &ThemeColors,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    on_context: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
     let bg = if is_selected {
         c.selected_bg
@@ -295,6 +622,54 @@ fn recent_item(
                 ),
         )
         .on_click(on_click)
+        .on_mouse_down(MouseButton::Right, on_context)
+}
+
+/// 右键上下文菜单的单个条目（悬浮高亮 + 点击触发）。
+fn ctx_menu_item(
+    id: &'static str,
+    label: String,
+    c: ThemeColors,
+    on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> impl IntoElement {
+    div()
+        .id(id)
+        .w_full()
+        .px_3()
+        .py_1p5()
+        .text_sm()
+        .text_color(c.text_primary)
+        .cursor_pointer()
+        .hover(|s| s.bg(c.button_hover_bg))
+        .child(SharedString::from(label))
+        .on_click(on_click)
+}
+
+/// 确认弹窗的按钮（danger=true 用红色表示危险操作）。
+fn confirm_button(
+    id: &'static str,
+    label: String,
+    c: ThemeColors,
+    danger: bool,
+    on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> impl IntoElement {
+    let (bg, hover, fg) = if danger {
+        (rgba(0xe54848ff), rgba(0xce3b3bff), rgba(0xffffffff))
+    } else {
+        (c.button_bg, c.button_hover_bg, c.text_primary)
+    };
+    div()
+        .id(id)
+        .px_4()
+        .py_1p5()
+        .rounded_md()
+        .bg(bg)
+        .text_sm()
+        .text_color(fg)
+        .cursor_pointer()
+        .hover(|s| s.bg(hover))
+        .child(SharedString::from(label))
+        .on_click(on_click)
 }
 
 // ──────────────────────────────────────────────
@@ -321,22 +696,64 @@ fn open_editor(
             window_bounds: Some(WindowBounds::Windowed(bounds)),
             ..Default::default()
         },
-        move |_, app| {
-            app.new(|entity_cx| {
-                let n = name.clone();
-                let p = path.clone();
-                match &model {
-                    Some(m) => EditorView::new_from_model(entity_cx, n, m.clone(), p),
-                    None => EditorView::new_blank(entity_cx, n),
-                }
-            })
+        move |window, app| {
+            // gpui-component 的 Input 文字颜色恒取 `cx.theme().foreground`（忽略父级
+            // text_color），且其 init 默认跟随系统明暗。EWP 编辑器的白纸背景来自自身
+            // 主题（content_bg），与系统明暗无关——若系统处于暗色，Input 会用浅色字画
+            // 在白纸上而看不见。这里把 gpui-component 的主题模式绑定到 EWP 纸张背景的
+            // 亮度：纸张亮 → Light（暗字），纸张暗 → Dark（亮字），确保始终有对比。
+            let paper = crate::styles::ThemeColors::current().content_bg;
+            let luminance = 0.299 * paper.r + 0.587 * paper.g + 0.114 * paper.b;
+            let mode = if luminance >= 0.5 {
+                gpui_component::ThemeMode::Light
+            } else {
+                gpui_component::ThemeMode::Dark
+            };
+            gpui_component::Theme::change(mode, Some(window), app);
+
+            // gpui-component 的 Input 要求窗口根 view 是 `Root`（其 paint 里 Root::read
+            // 会 panic）。这里按模型类型选对应的视图实体，统一转成 AnyView 再包进 Root。
+            let view_entity: gpui::AnyView = match model {
+                Some(m @ Model::Text(_)) => app
+                    .new(|entity_cx| {
+                        EditorView::new_from_model(window, entity_cx, name.clone(), m, path.clone())
+                    })
+                    .into(),
+                Some(m @ Model::Slide(_)) => app
+                    .new(|entity_cx| {
+                        SlideView::new_from_model(window, entity_cx, name.clone(), m, path.clone())
+                    })
+                    .into(),
+                Some(m @ Model::Sheet(_)) => app
+                    .new(|entity_cx| {
+                        SheetView::new_from_model(window, entity_cx, name.clone(), m, path.clone())
+                    })
+                    .into(),
+                None => app
+                    .new(|entity_cx| EditorView::new_blank(window, entity_cx, name.clone()))
+                    .into(),
+            };
+            app.new(|cx| gpui_component::Root::new(view_entity, window, cx))
         },
     );
     cx.activate(true);
 }
 
+/// 「新建演示文稿」：打开一个空白演示窗口。
+/// 注意：**不**把未保存的文稿加入最近列表 —— 只有真正落盘（保存）后
+/// 才会通过视图的 `save_document` 进入最近列表。
+fn create_new_presentation(_this: Option<gpui::WeakEntity<Welcome>>, cx: &mut App) {
+    open_editor(cx, "Untitled".into(), Some(SlideView::default_model()), None);
+}
+
+/// 「新建电子表格」：打开一个空白表格窗口。同样不进入最近列表。
+fn create_new_spreadsheet(_this: Option<gpui::WeakEntity<Welcome>>, cx: &mut App) {
+    open_editor(cx, "Untitled".into(), Some(SheetView::default_model()), None);
+}
+
 /// 「新建项目」：打开一个空白编辑器窗口（内存文档，不写磁盘）。
-fn create_new_project(cx: &mut App) {
+/// 同样不进入最近列表。
+fn create_new_project(_this: Option<gpui::WeakEntity<Welcome>>, cx: &mut App) {
     open_editor(cx, "Untitled".into(), None, None);
 }
 
@@ -358,7 +775,6 @@ fn open_project(this: Option<gpui::WeakEntity<Welcome>>, cx: &mut App) {
                     .map(|s| s.to_string_lossy().to_string())
                     .unwrap_or_default()
                     .into();
-                let file_type = data::FileType::from_extension(&path);
                 let model: Option<Model> = if path.extension().map(|e| e == "ewp").unwrap_or(false)
                 {
                     match model::ser::load::<Model>(&path, model::ser::NativeFormat::Json) {
@@ -370,6 +786,14 @@ fn open_project(this: Option<gpui::WeakEntity<Welcome>>, cx: &mut App) {
                     }
                 } else {
                     None
+                };
+                // 类型图标必须按「实际加载到的模型」判定，而不是按扩展名：
+                // 所有文稿都是 .ewp，若按 from_extension 一律会得到 Document，
+                // 导致表格/演示文件在最近列表里显示成文档图标（标 Doc 打开 Excel）。
+                let file_type = match &model {
+                    Some(Model::Sheet(_)) => data::FileType::Excel,
+                    Some(Model::Slide(_)) => data::FileType::PowerPoint,
+                    Some(Model::Text(_)) | None => data::FileType::Document,
                 };
                 let doc = data::RecentDoc {
                     name: name.to_string(),
@@ -386,11 +810,11 @@ fn open_project(this: Option<gpui::WeakEntity<Welcome>>, cx: &mut App) {
                         app.notify(id);
                     }
                     let save_path = if model.is_some() {
-                Some(path.clone())
-            } else {
-                None
-            };
-            open_editor(app, name.clone(), model, save_path);
+                        Some(path.clone())
+                    } else {
+                        None
+                    };
+                    open_editor(app, name.clone(), model, save_path);
                 });
             }
         }
@@ -428,6 +852,33 @@ fn open_recent(this: gpui::WeakEntity<Welcome>, index: usize, path: String, cx: 
         None
     };
     open_editor(cx, name, model, save_path);
+}
+
+/// 「从最近移除」：仅把该项从最近列表删除（不碰磁盘文件），并关闭右键菜单。
+fn remove_from_recent(this: gpui::WeakEntity<Welcome>, path: String, cx: &mut App) {
+    let id = this.entity_id();
+    let _ = this.update(cx, |this, _cx| {
+        data::remove_recent_doc(&mut this.data, &path);
+        // 选中项前移，避免指向越界
+        if let Some(sel) = this.selected {
+            if sel > 0 {
+                this.selected = Some(sel - 1);
+            }
+        }
+        this.context_menu = None;
+    });
+    cx.notify(id);
+}
+
+/// 「删除项目」：从最近列表移除并删除磁盘上的文件，然后关闭确认弹窗。
+fn delete_project(this: gpui::WeakEntity<Welcome>, path: String, cx: &mut App) {
+    let id = this.entity_id();
+    let _ = this.update(cx, |this, _cx| {
+        let _ = std::fs::remove_file(&path);
+        data::remove_recent_doc(&mut this.data, &path);
+        this.confirm_delete = None;
+    });
+    cx.notify(id);
 }
 
 /// 「设置」：打开独立设置窗口。
@@ -478,8 +929,8 @@ fn setup_keybindings(cx: &mut App) {
 
 fn setup_actions(cx: &mut App) {
     // File
-    cx.on_action::<NewProject>(|_, cx| create_new_project(cx));
-    cx.on_action::<NewWindow>(|_, cx| create_new_project(cx));
+    cx.on_action::<NewProject>(|_, cx| create_new_project(None, cx));
+    cx.on_action::<NewWindow>(|_, cx| create_new_project(None, cx));
     cx.on_action::<OpenProject>(|_, cx| open_project(None, cx));
     cx.on_action::<CloseProject>(|_, _cx| eprintln!("[EWP] Close Project"));
     cx.on_action::<CloseWindow>(|_, _cx| eprintln!("[EWP] Close Window"));
@@ -560,6 +1011,10 @@ fn main() {
     Application::new()
         .with_assets(FileAssetSource)
         .run(move |cx: &mut App| {
+            // gpui-component 一次性初始化（主题 / 输入 / 弹层等全局状态）。
+            // 必须在打开任何使用其组件的窗口之前调用，否则 Input 的 Root::read 会 panic。
+            gpui_component::init(cx);
+
             // 菜单栏（从 app_menus 模块构建）
             cx.set_menus(app_menus::app_menus());
 
@@ -586,6 +1041,8 @@ fn main() {
                         } else {
                             Some(0)
                         },
+                        context_menu: None,
+                        confirm_delete: None,
                     })
                 },
             )

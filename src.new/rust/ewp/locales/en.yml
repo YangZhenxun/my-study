@@ -2,10 +2,23 @@ welcome:
   title: "EWP Studio"
   version: "Version 0.0.1 alpha"
   create_new_project: "Create New Project..."
+  create_presentation: "Create Presentation..."
+  create_spreadsheet: "Create Spreadsheet..."
   clone_repository: "Clone Git Repository..."
   open_project: "Open Existing Project..."
   recent: "Recent"
   no_recent: "No Recent Projects"
+  context_open: "Open"
+  context_remove: "Remove from Recent"
+  context_delete: "Delete Project"
+  context_new: "New Project"
+  context_new_presentation: "New Presentation"
+  context_new_spreadsheet: "New Spreadsheet"
+  context_open_other: "Open Other Project"
+  confirm_delete_title: "Delete Project"
+  confirm_delete_message: "This will permanently delete the file:"
+  cancel: "Cancel"
+  delete: "Delete"
 
 menu:
   app:
@@ -72,6 +85,7 @@ settings:
 
 editor:
   save: "Save"
+  placeholder: "Start typing…"
   style: "Style"
   layout: "Layout"
   more: "More"

@@ -84,6 +84,10 @@ impl FileType {
     }
 
     /// 按文件扩展名推断类型（用于「打开」时自动选图标）。
+    /// 注意：本项目文稿统一为 `.ewp`，其真实类型须按加载到的 `Model`
+    /// 变体判定（见 `open_project`）；此函数保留给未来直接打开
+    /// `.docx` / `.xlsx` / `.pptx` 等原生格式时使用。
+    #[allow(dead_code)]
     pub fn from_extension(path: &std::path::Path) -> FileType {
         let ext = path
             .extension()
@@ -149,12 +153,22 @@ fn data_file_path() -> PathBuf {
 // ──────────────────────────────────────────────
 
 /// 从磁盘加载应用数据。文件不存在时返回默认值。
+///
+/// 加载后会做一次迁移清理：移除 `path` 为 `"(unsaved)"` 的残留项
+/// （这些是曾经「新建但未保存」的文稿被错误地写进了最近列表，
+/// 它们没有真实磁盘文件，既不该显示也不该持久化）。
 pub fn load() -> AppData {
     let path = data_file_path();
-    match fs::read_to_string(&path) {
+    let mut data = match fs::read_to_string(&path) {
         Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
         Err(_) => AppData::default(),
+    };
+    let before = data.recent_docs.len();
+    data.recent_docs.retain(|d| d.path != "(unsaved)");
+    if data.recent_docs.len() != before {
+        save(&data);
     }
+    data
 }
 
 /// 保存应用数据到磁盘。
@@ -178,5 +192,11 @@ pub fn add_recent_doc(data: &mut AppData, doc: RecentDoc) {
     data.recent_docs.insert(0, doc);
     // 限制最多 20 条
     data.recent_docs.truncate(20);
+    save(data);
+}
+
+/// 从最近列表移除指定路径的条目（仅改列表，不碰磁盘文件）。
+pub fn remove_recent_doc(data: &mut AppData, path: &str) {
+    data.recent_docs.retain(|d| d.path != path);
     save(data);
 }

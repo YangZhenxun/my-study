@@ -2,10 +2,23 @@ welcome:
   title: "EWP Studio"
   version: "版本 0.0.1 alpha"
   create_new_project: "新增專案..."
+  create_presentation: "新增簡報..."
+  create_spreadsheet: "新增試算表..."
   clone_repository: "複製 Git 儲存庫..."
   open_project: "開啟現有專案..."
   recent: "最近開啟"
   no_recent: "無最近專案"
+  context_open: "開啟"
+  context_remove: "從最近移除"
+  context_delete: "刪除專案"
+  context_new: "新增專案"
+  context_new_presentation: "新增簡報"
+  context_new_spreadsheet: "新增試算表"
+  context_open_other: "開啟其他專案"
+  confirm_delete_title: "刪除專案"
+  confirm_delete_message: "此操作將永久刪除檔案："
+  cancel: "取消"
+  delete: "刪除"
 
 menu:
   app:
@@ -72,6 +85,7 @@ settings:
 
 editor:
   save: "儲存"
+  placeholder: "開始輸入…"
   style: "樣式"
   layout: "佈局"
   more: "更多"

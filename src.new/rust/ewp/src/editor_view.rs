@@ -15,14 +15,12 @@
 //! └─────────────────────────────────────────────────────┘
 
 use gpui::{
-    anchored, deferred, AnyElement, App, Bounds, ClickEvent, Context, Corner, Element, ElementId,
-    ElementInputHandler, Entity, EntityInputHandler, FocusHandle, Focusable, FontWeight,
-    GlobalElementId,
-    InspectorElementId, KeyDownEvent, LayoutId, MouseButton, MouseDownEvent, Pixels, Point, Render,
-    Rgba, ScrollHandle, SharedString, Size, TextRun, UTF16Selection, Window, div, px, point, rgba,
+    anchored, deferred, App, ClickEvent, Context, Corner, DefiniteLength, Entity, FocusHandle,
+    Focusable, FontWeight, MouseButton, Pixels, Point, Render, Rgba, SharedString, Window, div, px,
+    point, rgba,
 };
 use gpui::prelude::*;
-use std::ops::Range;
+use gpui_component::input::{Input, InputEvent, InputState};
 use rust_i18n::t;
 
 use crate::data;
@@ -98,15 +96,11 @@ fn color_at(index: usize, c: &ThemeColors) -> Rgba {
 
 /// 编辑器根视图 —— Pages 风格布局。
 pub struct EditorView {
-    focus: FocusHandle,
+    /// 文本编辑核心：gpui-component 的多行 `InputState`（自带光标/选区/IME/点击定位/滚动）。
+    /// 手写输入层已废弃，全部交给它。
+    input_state: Entity<InputState>,
     /// 窗口标题栏显示的名字（如 "Untitled" / 文件名）。
     name: SharedString,
-    /// 多行文本缓冲，最后一行即正在编辑的行。
-    lines: Vec<String>,
-    /// 当前光标所在行。
-    caret_line: usize,
-    /// 当前光标在该行的列（字符索引）。
-    caret_col: usize,
     /// 背后的原生模型（保存时再映射回去，本期未做富文本往返）。
     #[allow(dead_code)]
     model: Model,
@@ -134,49 +128,59 @@ pub struct EditorView {
     font_dropdown_open: bool,
     /// 字体下拉锚点（窗口坐标，点击字体行时记录，用于悬浮定位）。
     font_dropdown_anchor: Point<Pixels>,
-    /// 输入法合成态（marked text）范围，以「当前行」的 UTF-16 偏移表示。
-    /// `None` 表示非合成态（普通输入）。仅当焦点在当前行时才有意义。
-    marked_range: Option<Range<usize>>,
-    /// 主画布滚动句柄（#canvas 用 `track_scroll` 绑定）。
-    /// `bounds_for_range` 据此扣除滚动偏移，使 IME 候选窗随画布滚动正确对齐。
-    scroll_handle: ScrollHandle,
-    /// 画布（InputRegion）上次 paint 的元素 bounds（窗口坐标）。
-    /// 由 `InputRegion::paint` 写入；`on_mouse_down` 据此把点击坐标反算成光标位置。
-    last_bounds: Option<Bounds<Pixels>>,
 }
 
 impl EditorView {
-    pub fn new_blank(cx: &mut Context<Self>, name: SharedString) -> Self {
-        Self::build(cx, name, Model::Text(Document::default()), None)
+    pub fn new_blank(window: &mut Window, cx: &mut Context<Self>, name: SharedString) -> Self {
+        Self::build(window, cx, name, Model::Text(Document::default()), None)
     }
 
     pub fn new_from_model(
+        window: &mut Window,
         cx: &mut Context<Self>,
         name: SharedString,
         model: Model,
         path: Option<PathBuf>,
     ) -> Self {
-        Self::build(cx, name, model, path)
+        Self::build(window, cx, name, model, path)
     }
 
     fn build(
+        window: &mut Window,
         cx: &mut Context<Self>,
         name: SharedString,
         model: Model,
         path: Option<PathBuf>,
     ) -> Self {
-        let lines = extract_lines(&model);
-        let lines = if lines.is_empty() {
-            vec![String::new()]
-        } else {
-            lines
-        };
+        let initial_text = extract_lines(&model).join("\n");
+
+        // 用 gpui-component 的多行 InputState 作为文本核心：自带光标、选区、
+        // IME 合成、点击定位、软换行与滚动。创建时需要 &mut Window（macOS 输入注册）。
+        let input_state = cx.new(|cx| {
+            InputState::new(window, cx)
+                .multi_line(true)
+                .soft_wrap(true)
+                .placeholder(t!("editor.placeholder"))
+        });
+        if !initial_text.is_empty() {
+            input_state.update(cx, |s, cx| s.set_value(initial_text, window, cx));
+        }
+
+        // 文本变化时置脏并刷新（状态栏字数/标题星号）。
+        cx.subscribe(&input_state, |this, _state, event: &InputEvent, cx| {
+            if matches!(event, InputEvent::Change) {
+                this.dirty = true;
+                cx.notify();
+            }
+        })
+        .detach();
+
+        // 挂载即聚焦，方便直接输入。
+        input_state.update(cx, |s, cx| s.focus(window, cx));
+
         Self {
-            focus: cx.focus_handle(),
+            input_state,
             name,
-            lines,
-            caret_line: 0,
-            caret_col: 0,
             model,
             path,
             dirty: false,
@@ -192,240 +196,9 @@ impl EditorView {
             color_index: 0,
             font_dropdown_open: false,
             font_dropdown_anchor: point(px(0.), px(0.)),
-            marked_range: None,
-            scroll_handle: ScrollHandle::new(),
-            last_bounds: None,
         }
     }
 
-    /// 把一次鼠标点击的窗口坐标反算成光标位置（行 + 列），并移动蓝色光标竖线。
-    ///
-    /// 这是 `bounds_for_range`（光标位置 → 像素矩形）的逆运算：先按统一行高求出行，
-    /// 再对该行做整行 shape、用 `ShapedLine::closest_index_for_x` 求最接近点击 x 的字节，
-    /// 最后换算成字符列。坐标换算必须与 `bounds_for_range` / render 的 padding、gutter、
-    /// 滚动偏移严格一致，否则点击落点会与真实光标错位。
-    fn place_caret_at(&mut self, pos: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(bounds) = self.last_bounds else {
-            return;
-        };
-        if self.lines.is_empty() {
-            return;
-        }
-
-        let lh = line_height(self.font_size);
-        let canvas_pad_x = px(48.0);
-        let canvas_pad_y = px(40.0);
-        let gutter_w = px(36.0);
-        let text_origin_x = canvas_pad_x + gutter_w;
-        let scroll = self.scroll_handle.offset();
-
-        // ── 行 ──
-        let rel_y: f32 = (pos.y - bounds.origin.y - canvas_pad_y - scroll.y).into();
-        let lh_f: f32 = lh.into();
-        let mut line_idx = if lh_f > 0.0 {
-            (rel_y / lh_f).floor() as isize
-        } else {
-            0
-        };
-        let max_line = self.lines.len().saturating_sub(1) as isize;
-        line_idx = line_idx.clamp(0, max_line);
-        let line_idx = line_idx as usize;
-        self.caret_line = line_idx;
-
-        // ── 列：整行 shape 后取最接近点击 x 的字节索引 ──
-        let line = self.lines[line_idx].clone();
-        if line.is_empty() {
-            self.caret_col = 0;
-        } else {
-            let font = gpui::font(self.font_family.clone());
-            let font_size_px = px(self.font_size as f32);
-            let text: SharedString = SharedString::from(line.clone());
-            let run = TextRun {
-                len: text.len(),
-                font,
-                color: gpui::black(),
-                background_color: None,
-                underline: None,
-                strikethrough: None,
-            };
-            let target_x = pos.x - bounds.origin.x - text_origin_x - scroll.x;
-            let shaped = window
-                .text_system()
-                .shape_line(text, font_size_px, &[run], None);
-            let byte = shaped.closest_index_for_x(target_x);
-            // 字节索引 → 字符索引（panic-safe：只统计落在 byte 之前的字符）。
-            self.caret_col = line.char_indices().take_while(|(b, _)| *b < byte).count();
-        }
-
-        self.marked_range = None;
-        cx.notify();
-    }
-
-    // ── 键盘处理（保留原有逻辑） ──
-
-    /// 处理键盘事件。返回 `true` 表示已消费（调用方应 `stop_propagation`）。
-    ///
-    /// 设计要点（GPUI 0.2.2 macOS 输入路径）：
-    /// - 可打印字符（含空格/字母/中文候选）**不在此处插入**，而是交给输入上下文
-    ///   `handleEvent → insertText / setMarkedText → EntityInputHandler`，避免与合成态冲突。
-    /// - Enter/Tab 是结构键，必须在此处理并阻止进入输入法（否则会被当成换行/制表符字符插入）。
-    /// - 退格/方向/Home/End 等没有 `key_char`，会先经 `handleEvent → doCommand` 再被派发回此处。
-    fn handle_key(&mut self, event: &KeyDownEvent, cx: &mut Context<Self>) -> bool {
-        let ks = &event.keystroke;
-
-        // ⌘/Ctrl + S：保存
-        if (ks.modifiers.platform || ks.modifiers.control)
-            && (ks.key == "s" || ks.key_char.as_deref() == Some("s"))
-        {
-            self.save_document(cx);
-            return true;
-        }
-
-        // 带 ctrl/cmd/alt 的组合键：交给快捷键系统，不消费
-        if ks.modifiers.platform || ks.modifiers.control || ks.modifiers.alt {
-            return false;
-        }
-
-        // 结构键：在 on_key_down 直接处理并阻止进入输入法
-        match ks.key.as_str() {
-            "enter" => {
-                self.split_line();
-                self.dirty = true;
-                cx.notify();
-                return true;
-            }
-            "tab" => {
-                self.insert_tab();
-                self.dirty = true;
-                cx.notify();
-                return true;
-            }
-            _ => {}
-        }
-
-        // 其余可打印字符：交给输入上下文（handleEvent → insertText / IME 合成），
-        // 不在此处插入，避免与输入法合成态冲突导致重复插入。
-        if ks.key_char.is_some() {
-            return false;
-        }
-
-        // 导航 / 编辑键（退格、方向、Home/End 等）
-        match ks.key.as_str() {
-            "backspace" => {
-                let col = self.caret_col;
-                if col > 0 {
-                    let line = &mut self.lines[self.caret_line];
-                    let byte = char_byte_index(line, col - 1);
-                    line.remove(byte);
-                    self.caret_col -= 1;
-                    self.dirty = true;
-                } else if self.caret_line > 0 {
-                    let cur = self.lines.remove(self.caret_line);
-                    self.caret_line -= 1;
-                    self.caret_col = self.lines[self.caret_line].chars().count();
-                    self.lines[self.caret_line].push_str(&cur);
-                    self.dirty = true;
-                }
-                cx.notify();
-                return true;
-            }
-            "home" => {
-                self.caret_col = 0;
-                cx.notify();
-                return true;
-            }
-            "end" => {
-                self.caret_col = self.lines[self.caret_line].chars().count();
-                cx.notify();
-                return true;
-            }
-            "left" => {
-                if self.caret_col > 0 {
-                    self.caret_col -= 1;
-                }
-                cx.notify();
-                return true;
-            }
-            "right" => {
-                let len = self.lines[self.caret_line].chars().count();
-                if self.caret_col < len {
-                    self.caret_col += 1;
-                }
-                cx.notify();
-                return true;
-            }
-            "up" => {
-                if self.caret_line > 0 {
-                    self.caret_line -= 1;
-                    self.clamp_caret();
-                }
-                cx.notify();
-                return true;
-            }
-            "down" => {
-                if self.caret_line + 1 < self.lines.len() {
-                    self.caret_line += 1;
-                    self.clamp_caret();
-                }
-                cx.notify();
-                return true;
-            }
-            _ => return false,
-        }
-    }
-
-    /// 在光标处拆行（Enter）。
-    fn split_line(&mut self) {
-        let cur = self.lines[self.caret_line].clone();
-        let byte = char_byte_index(&cur, self.caret_col);
-        let (left, right) = cur.split_at(byte);
-        self.lines[self.caret_line] = left.to_string();
-        self.lines.insert(self.caret_line + 1, right.to_string());
-        self.caret_line += 1;
-        self.caret_col = 0;
-    }
-
-    /// 在光标处插入两个空格（Tab）。
-    fn insert_tab(&mut self) {
-        let line = &mut self.lines[self.caret_line];
-        let byte = char_byte_index(line, self.caret_col);
-        line.insert(byte, ' ');
-        line.insert(byte + 1, ' ');
-        self.caret_col += 2;
-    }
-
-    fn clamp_caret(&mut self) {
-        let len = self.lines[self.caret_line].chars().count();
-        if self.caret_col > len {
-            self.caret_col = len;
-        }
-    }
-
-    /// 在「当前行」文本空间内以 UTF-16 坐标替换/插入文本，并把光标移到插入点之后。
-    ///
-    /// `range = None` 表示替换当前选择：合成态下=标记范围，否则=光标处的空范围。
-    /// 这是 `EntityInputHandler` 两个写入方法的统一落点（提交 / 合成）。
-    fn replace_range(&mut self, range: Option<Range<usize>>, text: &str) {
-        let caret_line = self.caret_line;
-        let cur_marked = self.marked_range.clone();
-        let caret_utf16 = utf16_len_up_to(&self.lines[caret_line], self.caret_col);
-        let (start_u, end_u) = match range {
-            Some(r) => (r.start, r.end),
-            None => match &cur_marked {
-                Some(m) => (m.start, m.end),
-                None => (caret_utf16, caret_utf16),
-            },
-        };
-
-        let line = &mut self.lines[caret_line];
-        let s = utf16_to_byte(line, start_u);
-        let e = utf16_to_byte(line, end_u);
-        line.replace_range(s..e, text);
-
-        let new_caret_utf16 = start_u + text.chars().map(|c| c.len_utf16()).sum::<usize>();
-        self.caret_col = utf16_to_char(line, new_caret_utf16);
-        self.dirty = true;
-    }
 
     /// 切换格式侧栏开/关。
     fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
@@ -486,15 +259,15 @@ impl EditorView {
         cx.notify();
     }
 
-    /// 把当前多行缓冲映射回原生 `Document`（每行一个段落）。
-    fn to_document(&self) -> Document {
-        let blocks = self
-            .lines
-            .iter()
+    /// 把 `InputState` 当前文本映射回原生 `Document`（按 `\n` 拆行，每行一个段落）。
+    fn to_document(&self, cx: &App) -> Document {
+        let text = self.input_state.read(cx).value().to_string();
+        let blocks = text
+            .split('\n')
             .map(|line| {
                 Block::Paragraph(Paragraph {
                     runs: vec![Run {
-                        text: line.clone(),
+                        text: line.to_string(),
                         ..Default::default()
                     }],
                     ..Default::default()
@@ -509,7 +282,7 @@ impl EditorView {
 
     /// 保存到磁盘。
     fn save_document(&mut self, cx: &mut Context<Self>) {
-        let doc = self.to_document();
+        let doc = self.to_document(cx);
         let path = self.path.clone().unwrap_or_else(|| {
             let safe = self.name.replace(['/', '\\', ':'], "_");
             data::data_dir().join(format!("{safe}.ewp"))
@@ -537,242 +310,27 @@ impl EditorView {
 }
 
 impl Focusable for EditorView {
-    fn focus_handle(&self, _cx: &App) -> FocusHandle {
-        self.focus.clone()
+    fn focus_handle(&self, cx: &App) -> FocusHandle {
+        // 焦点直接路由到内嵌的 InputState，让 gpui-component 的 Input 接管输入。
+        self.input_state.read(cx).focus_handle(cx)
     }
 }
 
-// ════════════════════════════════════════
-// EntityInputHandler — 中文/IME 输入
-// ════════════════════════════════════════
-//
-// GPUI 0.2.2 把文本输入抽象成「文档 + UTF-16 坐标」。我们把「当前正在编辑的那一行」
-// 当作这个文档：所有 range 都是相对于 `self.lines[self.caret_line]` 的 UTF-16 偏移。
-// 合成态（marked text）用 `marked_range` 记录，渲染时加下划线并据此定位候选窗。
-
-impl EntityInputHandler for EditorView {
-    fn text_for_range(
-        &mut self,
-        range: Range<usize>,
-        _adjusted_range: &mut Option<Range<usize>>,
-        _window: &mut Window,
-        _cx: &mut Context<Self>,
-    ) -> Option<String> {
-        let line = &self.lines[self.caret_line];
-        let s = utf16_to_byte(line, range.start);
-        let e = utf16_to_byte(line, range.end);
-        Some(line[s..e].to_string())
-    }
-
-    fn selected_text_range(
-        &mut self,
-        _ignore_disabled_input: bool,
-        _window: &mut Window,
-        _cx: &mut Context<Self>,
-    ) -> Option<UTF16Selection> {
-        let caret_utf16 = utf16_len_up_to(&self.lines[self.caret_line], self.caret_col);
-        let range = self
-            .marked_range
-            .clone()
-            .unwrap_or_else(|| caret_utf16..caret_utf16);
-        Some(UTF16Selection { range, reversed: false })
-    }
-
-    fn marked_text_range(
-        &self,
-        _window: &mut Window,
-        _cx: &mut Context<Self>,
-    ) -> Option<Range<usize>> {
-        self.marked_range.clone()
-    }
-
-    fn unmark_text(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-        if let Some(m) = self.marked_range.take() {
-            let line = &self.lines[self.caret_line];
-            self.caret_col = utf16_to_char(line, m.end);
-            self.dirty = true;
-            cx.notify();
-        }
-    }
-
-    fn replace_text_in_range(
-        &mut self,
-        range: Option<Range<usize>>,
-        text: &str,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        // 提交：替换 range（None = 当前选择/合成态），清除合成态。
-        self.replace_range(range, text);
-        self.marked_range = None;
-        cx.notify();
-    }
-
-    fn replace_and_mark_text_in_range(
-        &mut self,
-        range: Option<Range<usize>>,
-        new_text: &str,
-        new_selected_range: Option<Range<usize>>,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        // 合成：替换 range 并标记为 marked text。
-        let caret_line = self.caret_line;
-        let cur_marked = self.marked_range.clone();
-        let caret_utf16 = utf16_len_up_to(&self.lines[caret_line], self.caret_col);
-        let ins_utf16 = match range {
-            Some(ref r) => r.start,
-            None => match &cur_marked {
-                Some(m) => m.start,
-                None => caret_utf16,
-            },
-        };
-
-        self.replace_range(range, new_text);
-
-        let new_len_utf16 = new_text.chars().map(|c| c.len_utf16()).sum::<usize>();
-        self.marked_range = Some(ins_utf16..ins_utf16 + new_len_utf16);
-
-        // 光标定位到 IME 给出的选中段末尾，否则定位到合成段末尾。
-        let caret_utf16 = match new_selected_range {
-            Some(sel) => sel.end,
-            None => ins_utf16 + new_len_utf16,
-        };
-        let line = &self.lines[self.caret_line];
-        self.caret_col = utf16_to_char(line, caret_utf16);
-        cx.notify();
-    }
-
-    fn bounds_for_range(
-        &mut self,
-        _range_utf16: Range<usize>,
-        element_bounds: Bounds<Pixels>,
-        window: &mut Window,
-        _cx: &mut Context<Self>,
-    ) -> Option<Bounds<Pixels>> {
-        // 参照 Zed editor（crates/editor/src/input.rs:3032）的 bounds_for_range：
-        // 返回「窗口 content 坐标」下的光标矩形——macOS 的 firstRectForCharacterRange 会自行
-        // 叠加窗口 frame 原点并翻转 y 轴。所以最终 origin = element_bounds.origin + 元素内局部坐标。
-        //
-        // 这里把「当前正在编辑的那一行」当作 IME 文档，光标位置由 self.caret_line / self.caret_col 给出。
-        // 用 window.text_system().shape_line 测量光标之前的文本像素宽，从而得到精确的 x 偏移；
-        // 行高用同一字体的空格度量（ascent + descent），与画布渲染一致。
-        //
-        // 画布（#canvas）可滚动，其滚动偏移由 self.scroll_handle 跟踪：
-        //   scroll.y 向下为负，scroll.x 向右为负（ScrollHandle::offset()）。
-        // 局部坐标 local_* 是按「内容顶部」度量的，屏幕上还要叠加滚动偏移才是视口坐标，
-        // 故 local_y 最终 + scroll.y、local_x + scroll.x（与 Zed scroll_position() 减法的语义一致）。
-        // 零 panic 守卫：本函数由 macOS IME 的 firstRectForCharacterRange（extern "C"）
-        // 同步回调，任何 unwrap / 索引越界都会跨 FFI 边界触发 abort 直接崩溃。
-        // 状态异常时一律返回 None（GPUI 映射为零矩形，候选窗退到默认位置），绝不 panic。
-        let line = self.lines.get(self.caret_line)?;
-
-        let font_size_px = px(self.font_size as f32);
-        let font = gpui::font(self.font_family.clone());
-
-        // 当前行中、光标之前的前缀文本（按字符切分），用于测量 x 偏移。
-        // 锚点优先用 IME 请求的 range 起点（合成态=合成段起点、选区=选区起点），否则用当前光标。
-        let caret_char = if !_range_utf16.is_empty() {
-            let total = line.chars().map(|c| c.len_utf16()).sum::<usize>();
-            if _range_utf16.start <= total {
-                utf16_to_char(line, _range_utf16.start)
-            } else {
-                self.caret_col
-            }
-        } else {
-            self.caret_col
-        };
-        // 用真实 ShapedLine 的 x_for_index 取光标 x（与渲染完全一致，不再手工估算宽度）。
-        // 整行作为一个 run 测量，run.len == 整行字节长，绝不会触发 layout_line 切片越界。
-        let line_str: SharedString = SharedString::from(line.to_string());
-        let line_run = TextRun {
-            len: line_str.len(),
-            font: font.clone(),
-            color: gpui::black(),
-            background_color: None,
-            underline: None,
-            strikethrough: None,
-        };
-        let shaped = window
-            .text_system()
-            .shape_line(line_str, font_size_px, &[line_run], None);
-        let caret_byte = char_byte_index(line, caret_char);
-        let mut prefix_w = shaped.x_for_index(caret_byte);
-        // 当前行渲染时在光标处插了一个 2px 宽的光标竖线 div，x 需补上。
-        if caret_char > 0 {
-            prefix_w += px(2.);
-        }
-
-        // 行高：render() 的每一行都用同一个 line_height() 显式定高，
-        // 因此这里算出的 y 与真实渲染逐行对齐（不再用 ascent+descent 估算）。
-        let lh = line_height(self.font_size);
-
-        // 画布内部布局常量（必须与 render() 中 #canvas 的 padding 和 行号 gutter 严格一致）：
-        let canvas_pad_x = px(48.0); // canvas .px(px(48.))
-        let canvas_pad_y = px(40.0); // canvas .py(px(40.))
-        let gutter_w = px(36.0); // gutter .w(px(36.))；pr_2() 是 gutter 内部右内边距，不额外占行间距
-        let text_origin_x = canvas_pad_x + gutter_w;
-
-        // 叠加滚动偏移：把「内容坐标」换算回「视口坐标」（scroll.y/x 向下/向右为负，直接相加即抵消）。
-        let scroll = self.scroll_handle.offset();
-        let local_x = text_origin_x + prefix_w + scroll.x;
-        let local_y = canvas_pad_y + lh * (self.caret_line as f32) + scroll.y;
-
-        Some(Bounds {
-            origin: Point::new(
-                element_bounds.origin.x + local_x,
-                element_bounds.origin.y + local_y,
-            ),
-            size: Size::new(px(self.font_size as f32), lh),
-        })
-    }
-
-    fn character_index_for_point(
-        &mut self,
-        _point: Point<Pixels>,
-        _window: &mut Window,
-        _cx: &mut Context<Self>,
-    ) -> Option<usize> {
-        None
-    }
-}
-
-// ════════════════════════════════════════
-// Render — Pages 风格布局
-// ════════════════════════════════════════
 
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let this = cx.entity();
-        let focused = self.focus.is_focused(window);
         let name = self.name.clone();
-        let caret_line = self.caret_line;
-        let caret_col = self.caret_col;
         let c = ThemeColors::current();
 
-        let line_count = self.lines.len();
-        let char_count: usize = self.lines.iter().map(|l| l.chars().count()).sum();
-
-        // 预渲染所有行视图；合成态（marked）只在当前行生效。
-        let line_views: Vec<_> = self
-            .lines
-            .iter()
-            .enumerate()
-            .map(|(i, line)| {
-            let is_caret = focused && i == caret_line;
-            build_line(
-                i,
-                line,
-                is_caret,
-                caret_col,
-                &c,
-                self.font_size,
-                self.color_index,
-                &self.font_family,
-                if is_caret { self.marked_range.clone() } else { None },
-            )
-        })
-            .collect();
+        // 文本统计与光标位置从 InputState 读取（gpui-component 维护真实状态）。
+        let state = self.input_state.read(cx);
+        let text = state.value();
+        let line_count = text.split('\n').count();
+        let char_count: usize = text.chars().filter(|ch| *ch != '\n').count();
+        let cursor = state.cursor_position();
+        let caret_line = cursor.line as usize;
+        let caret_col = cursor.character as usize;
 
         // 格式切换回调（顶栏与侧栏的 B/I/U/对齐按钮共用）
         let on_format = {
@@ -803,26 +361,14 @@ impl Render for EditorView {
         };
 
         // ── 根容器：横向排列（左画布区 + 右侧栏） ──
+        // 注意：焦点与键盘全部交给内嵌的 gpui-component Input（它自带 track_focus /
+        // on_key_down / IME），根容器不再抢焦点，否则 Input 无法输入。
         div()
             .id("editor-root")
-            .track_focus(&self.focus) // 关键：让 FocusHandle 与 DOM 节点关联，否则 on_key_down 收不到按键
             .size_full()
             .flex()
             .flex_row()
             .bg(c.window_bg)
-            .on_mouse_down(MouseButton::Left, {
-                let focus = self.focus.clone();
-                move |_, window, _| window.focus(&focus)
-            })
-            .on_key_down({
-                let this = this.clone();
-                move |event: &KeyDownEvent, _window, cx| {
-                    let consumed = this.update(cx, |this, cx| this.handle_key(event, cx));
-                    if consumed {
-                        cx.stop_propagation();
-                    }
-                }
-            })
             // ═══ 左侧区域：工具栏 + 画布 + 状态栏 ═══
             .child(
                 div()
@@ -860,43 +406,26 @@ impl Render for EditorView {
                         div()
                             .flex()
                             .flex_1()
+                            .min_h_0()
                             .px(px(32.))
                             .py(px(24.))
                             .bg(c.border) // 浅灰边框色作画布外围
-                            // ── 白纸画布（可滚动） ──
-                            // 用 InputRegion 包一层：在 paint 阶段向窗口注册 EntityInputHandler，
-                            // 从而让 macOS 输入法把合成文本（中文拼音→汉字）投递到本视图。
+                            // ── 白纸画布：内嵌 gpui-component 多行 Input（自带光标/选区/IME/点击/滚动） ──
                             .child(
-                                InputRegion {
-                                    view: this.clone(),
-                                    focus: self.focus.clone(),
-                                    child: div()
-                                        .id("canvas")
-                                        .track_scroll(&self.scroll_handle)
-                                        .on_mouse_down(MouseButton::Left, {
-                                            let this = this.clone();
-                                            let focus = self.focus.clone();
-                                            move |event: &MouseDownEvent, window, cx| {
-                                                window.focus(&focus);
-                                                let pos = event.position;
-                                                let _ = this.update(cx, |this, cx| {
-                                                    this.place_caret_at(pos, window, cx)
-                                                });
-                                            }
-                                        })
-                                        .flex()
-                                        .flex_col()
-                                        .size_full()
-                                        .overflow_y_scroll()
-                                        .rounded_md()
-                                        .bg(c.content_bg) // 白底页面
-                                        .px(px(48.))
-                                        .py(px(40.))
-                                        .text_base()
-                                        .text_color(c.text_primary)
-                                        .children(line_views)
-                                        .into_any_element(),
-                                },
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .size_full()
+                                    .rounded_md()
+                                    .bg(c.content_bg) // 白底页面
+                                    .px(px(48.))
+                                    .py(px(40.))
+                                    .text_color(c.text_primary)
+                                    .child(
+                                        Input::new(&self.input_state)
+                                            .h_full()
+                                            .appearance(false), // 去掉 Input 自带边框/底色，融入白纸
+                                    ),
                             ),
                     )
                     // ── 状态栏 ──
@@ -1162,7 +691,8 @@ fn format_sidebar(
     div()
         .flex()
         .flex_col()
-        .w(px(280.))
+        .w(DefiniteLength::Fraction(0.4))
+        .flex_shrink_0()
         .h_full()
         .border_l_1()
         .border_color(c.border)
@@ -1585,121 +1115,6 @@ fn status_bar(
 }
 
 // ════════════════════════════════════════
-// 组件：行渲染
-// ════════════════════════════════════════
-
-/// 渲染一行：行号 + 文本；当前光标行把竖线光标插到对应列并高亮当前行。
-///
-/// `marked` 为输入法合成态范围（UTF-16，仅对光标行有意义）。有值时把该段加下划线，
-/// 并把光标放在合成段末尾（跟随 IME 候选选择）。
-fn build_line(
-    i: usize,
-    line: &str,
-    is_caret_line: bool,
-    caret_col: usize,
-    c: &ThemeColors,
-    font_size: u16,
-    color_index: usize,
-    font_family: &str,
-    marked: Option<Range<usize>>,
-) -> impl IntoElement {
-    let gutter = div()
-        .w(px(36.))
-        .flex_none()
-        .pr_2()
-        .text_right()
-        .text_xs()
-        .text_color(c.text_muted)
-        .opacity(0.5)
-        .child(SharedString::from(format!("{}", i + 1)));
-
-    let text = if is_caret_line {
-        // 把当前行切成片段，并决定光标插入位置。
-        let (segments, caret_after): (Vec<(&str, bool)>, usize) = match &marked {
-            Some(m) => {
-                let ms = utf16_to_char(line, m.start);
-                let me = utf16_to_char(line, m.end);
-                let (b, rest) = split_at_char(line, ms);
-                let (mk, a) = split_at_char(rest, me.saturating_sub(ms));
-                (vec![(b, false), (mk, true), (a, false)], 1)
-            }
-            None => {
-                let (b, a) = split_at_char(line, caret_col);
-                (vec![(b, false), (a, false)], 0)
-            }
-        };
-
-        let mut row = div()
-            .flex()
-            .flex_row()
-            .items_center()
-            .flex_1()
-            .min_h(px(20.))
-            .text_size(px(font_size as f32))
-            .font_family(font_family.to_string())
-            .text_color(color_at(color_index, c));
-
-        for (idx, (seg, underlined)) in segments.iter().enumerate() {
-            if idx == caret_after {
-                row = row.child(
-                    div()
-                        .flex_none()
-                        .w(px(2.))
-                        .h(px(font_size as f32 + 4.))
-                        .bg(c.accent),
-                );
-            }
-            row = row.child(
-                div()
-                    .when(*underlined, |s| s.underline())
-                    .child(SharedString::from(if seg.is_empty() {
-                        "\u{00A0}".to_string()
-                    } else {
-                        seg.to_string()
-                    })),
-            );
-        }
-        if caret_after >= segments.len() {
-            row = row.child(
-                div()
-                    .flex_none()
-                    .w(px(2.))
-                    .h(px(font_size as f32 + 4.))
-                    .bg(c.accent),
-            );
-        }
-        row
-    } else {
-        div()
-            .flex_1()
-            .min_h(px(20.))
-            .text_size(px(font_size as f32))
-            .font_family(font_family.to_string())
-            .text_color(color_at(color_index, c))
-            .child(if line.is_empty() {
-                SharedString::from("\u{00A0}") // 不换行空格保持行高
-            } else {
-                SharedString::from(line.to_string())
-            })
-    };
-
-    let lh = line_height(font_size);
-    let mut row = div()
-        .flex()
-        .flex_row()
-        .w_full()
-        .h(lh)
-        .items_center()
-        .child(gutter)
-        .child(text);
-
-    if is_caret_line {
-        row = row.bg(rgba(0x0a84ff0d)); // 极浅蓝高亮
-    }
-    row
-}
-
-// ════════════════════════════════════════
 // 辅助函数
 // ════════════════════════════════════════
 
@@ -1721,141 +1136,5 @@ fn extract_lines(model: &Model) -> Vec<String> {
             .collect()
     } else {
         vec![]
-    }
-}
-
-/// 返回第 `char_idx` 个字符在字符串中的字节下标。
-fn char_byte_index(s: &str, char_idx: usize) -> usize {
-    s.char_indices()
-        .nth(char_idx)
-        .map(|(i, _)| i)
-        .unwrap_or(s.len())
-}
-
-/// 在字符边界切分字符串。
-fn split_at_char(s: &str, char_idx: usize) -> (&str, &str) {
-    let byte = char_byte_index(s, char_idx);
-    (&s[..byte], &s[byte..])
-}
-
-/// UTF-16 偏移 → 字节偏移（在当前行字符串内）。
-fn utf16_to_byte(s: &str, utf16: usize) -> usize {
-    let mut u = 0;
-    for (byte, c) in s.char_indices() {
-        if u >= utf16 {
-            return byte;
-        }
-        u += c.len_utf16();
-    }
-    s.len()
-}
-
-/// UTF-16 偏移 → 字符索引（在当前行字符串内，用于把 IME 坐标映射回 `caret_col`）。
-fn utf16_to_char(s: &str, utf16: usize) -> usize {
-    let mut u = 0;
-    let mut chars = 0;
-    for c in s.chars() {
-        if u >= utf16 {
-            return chars;
-        }
-        u += c.len_utf16();
-        chars += 1;
-    }
-    chars
-}
-
-/// 字符索引 → 当前行中该位置之前的 UTF-16 长度。
-fn utf16_len_up_to(s: &str, char_idx: usize) -> usize {
-    s.char_indices()
-        .take(char_idx)
-        .map(|(_, c)| c.len_utf16())
-        .sum()
-}
-
-/// 编辑器每行的统一行高（px）。`render()` 的每一行与 `bounds_for_range` 都用它，
-/// 保证 IME 候选窗的 y 坐标与真实渲染逐行对齐（之前用 `ascent+descent` 估算会与
-/// GPUI 默认行高不符，行号越大偏移越大 → 候选窗"不跟手"）。
-fn line_height(font_size: u16) -> Pixels {
-    px((font_size as f32 * 1.6).max(20.0))
-}
-
-// ════════════════════════════════════════
-// InputRegion — 把画布包成可承载输入处理器的元素
-// ════════════════════════════════════════
-//
-// GPUI 0.2.2 没有「把 TextInput 挂到现成 div 上」的 API；必须用一个自定义 `Element`
-// 在 `paint` 阶段调用 `window.handle_input(...)` 来注册 `EntityInputHandler`。
-// 这里把画布 `child` 原样转发，只在 paint 时顺手注册输入处理器。
-
-struct InputRegion {
-    child: AnyElement,
-    view: Entity<EditorView>,
-    focus: FocusHandle,
-}
-
-impl Element for InputRegion {
-    type RequestLayoutState = ();
-    type PrepaintState = ();
-
-    fn id(&self) -> Option<ElementId> {
-        None
-    }
-
-    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
-        None
-    }
-
-    fn request_layout(
-        &mut self,
-        _id: Option<&GlobalElementId>,
-        _inspector_id: Option<&InspectorElementId>,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> (LayoutId, ()) {
-        let layout_id = self.child.request_layout(window, cx);
-        (layout_id, ())
-    }
-
-    fn prepaint(
-        &mut self,
-        _id: Option<&GlobalElementId>,
-        _inspector_id: Option<&InspectorElementId>,
-        _bounds: Bounds<Pixels>,
-        _request_layout: &mut (),
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        self.child.prepaint(window, cx);
-    }
-
-    fn paint(
-        &mut self,
-        _id: Option<&GlobalElementId>,
-        _inspector_id: Option<&InspectorElementId>,
-        bounds: Bounds<Pixels>,
-        _request_layout: &mut (),
-        _prepaint: &mut (),
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        // 先正常绘制画布，再注册输入处理器（handle_input 只能在 paint 阶段调用，
-        // 且只在 focus 处于本视图时才会真正生效）。
-        self.child.paint(window, cx);
-        // 记录本次画布 bounds（窗口坐标），供 on_mouse_down 反算点击位置。
-        // 仅写字段、不 notify，避免触发重绘循环。
-        self.view.update(cx, |v, _| v.last_bounds = Some(bounds));
-        window.handle_input(
-            &self.focus,
-            ElementInputHandler::new(bounds, self.view.clone()),
-            cx,
-        );
-    }
-}
-
-impl IntoElement for InputRegion {
-    type Element = Self;
-
-    fn into_element(self) -> Self::Element {
-        self
     }
 }
