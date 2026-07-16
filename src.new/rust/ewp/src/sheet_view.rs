@@ -137,6 +137,9 @@ pub struct SheetView {
     selected: Option<(usize, usize)>,
     /// 是否处于编辑状态（编辑栏接管输入）。
     editing: bool,
+    /// 编辑目标格 (col, row)：进入编辑时锁定，提交时以此为准，
+    /// 避免 Blur 延后提交时选区已切换到别的格导致写错位置。
+    edit_target: Option<(usize, usize)>,
     /// 编辑栏输入框（gpui-component 单线 Input，自带光标/选区/IME）。
     edit_input: Entity<InputState>,
 
@@ -187,10 +190,17 @@ impl SheetView {
         let edit_input = cx.new(|cx| InputState::new(window, cx).multi_line(false));
 
         // 失焦即提交（例如点到别的格子 / 切走焦点时，把当前编辑内容落盘到单元格）。
+        // 注意：Blur 事件是在 edit_input 自身的 update 周期内 emit 的，此刻
+        // 直接 update(SheetView) 或 read(edit_input) 都会触发 GPUI 重入 panic
+        // （"cannot update ... while it is already being updated"）。因此用
+        // `defer` 把提交延后到当前 effect cycle 末尾，届时所有 lease 已释放。
         let this_entity = cx.entity();
         cx.subscribe(&edit_input, move |_this, _state, event: &InputEvent, cx| {
             if matches!(event, InputEvent::Blur) {
-                let _ = this_entity.update(cx, |v, cx| v.commit_edit(cx));
+                let entity = this_entity.clone();
+                cx.defer(move |cx| {
+                    let _ = entity.update(cx, |v, cx| v.commit_edit(cx));
+                });
             }
         })
         .detach();
@@ -203,6 +213,7 @@ impl SheetView {
             current_sheet: 0,
             selected: Some((0, 0)),
             editing: false,
+            edit_target: None,
             edit_input,
             list_scroll: UniformListScrollHandle::default(),
             focus: cx.focus_handle(),
@@ -264,6 +275,7 @@ impl SheetView {
             None => self.selected_raw_text(),
         };
         self.editing = true;
+        self.edit_target = self.selected;
         self.edit_input
             .update(cx, |s, cx| s.set_value(raw, window, cx));
         self.edit_input.update(cx, |s, cx| s.focus(window, cx));
@@ -275,7 +287,8 @@ impl SheetView {
         if !self.editing {
             return;
         }
-        let (col, row) = match self.selected {
+        // 提交目标以进入编辑时锁定的 edit_target 为准，而非当前选区。
+        let (col, row) = match self.edit_target {
             Some(s) => s,
             None => {
                 self.editing = false;
@@ -294,6 +307,7 @@ impl SheetView {
             },
         );
         self.editing = false;
+        self.edit_target = None;
         self.dirty = true;
         cx.notify();
     }
@@ -306,6 +320,7 @@ impl SheetView {
         self.edit_input
             .update(cx, |s, cx| s.set_value("", window, cx));
         self.editing = false;
+        self.edit_target = None;
         self.focus.focus(window);
         cx.notify();
     }
