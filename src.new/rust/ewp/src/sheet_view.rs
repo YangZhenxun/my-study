@@ -29,9 +29,8 @@
 //! 创建该格（仿 Apple Numbers 的动态网格）。这就是「用户如何新建单元格」。
 
 use gpui::{
-    AnyElement, App, Context, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent,
-    ListHorizontalSizingBehavior, MouseButton, MouseDownEvent, Render, SharedString,
-    UniformListScrollHandle, Window, div, px, rgba, uniform_list,
+    App, Bounds, Context, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent, MouseButton,
+    MouseDownEvent, Render, ScrollHandle, SharedString, Window, canvas, div, point, px, rgba, size,
 };
 use gpui::prelude::*;
 use gpui_component::input::{Input, InputEvent, InputState};
@@ -42,6 +41,11 @@ use crate::model::common::TextStyle;
 use crate::model::ser::NativeFormat;
 use crate::model::sheet::{Cell, CellValue, Sheet, Workbook};
 use crate::model::Model;
+use crate::sheet_grid::{
+    VisibleWindow, col_left, col_width, compute_visible_window, paint_cell_background,
+    paint_cell_text, paint_row_number, row_height, row_top,
+};
+use crate::sheet_grid_cache::GridTextCache;
 use crate::styles::ThemeColors;
 use std::path::PathBuf;
 
@@ -53,6 +57,9 @@ const CELL_W: f32 = 100.0;
 const CELL_H: f32 = 28.0;
 const HEADER_W: f32 = 44.0;
 const COL_HEADER_H: f32 = 28.0;
+// 单元格内边距与文字字号（与 `sheet_grid.rs` 保持一致）。
+const CELL_PAD: f32 = 4.0;
+const CELL_FONT_SIZE: f32 = 13.0;
 
 /// 把列索引转成电子表格列名（0→A, 25→Z, 26→AA）。
 fn col_name(mut n: usize) -> String {
@@ -143,8 +150,12 @@ pub struct SheetView {
     /// 编辑栏输入框（gpui-component 单线 Input，自带光标/选区/IME）。
     edit_input: Entity<InputState>,
 
+    /// 横向滚动手柄：列标头（#grid-hscroll）使用；数据区横向滚动时手动读取其偏移绘制。
+    hscroll: ScrollHandle,
     /// 纵向滚动手柄：数据区与行号列共享，实现冻结窗格的纵向同步滚动。
-    vscroll: UniformListScrollHandle,
+    vscroll: ScrollHandle,
+    /// 单元格文字 `ShapedLine` 缓存（独立 Entity，paint 闭包内安全访问，避免每帧重新 shape）。
+    text_cache: Entity<GridTextCache>,
 
     focus: FocusHandle,
 }
@@ -215,7 +226,9 @@ impl SheetView {
             editing: false,
             edit_target: None,
             edit_input,
-            vscroll: UniformListScrollHandle::new(),
+            hscroll: ScrollHandle::new(),
+            vscroll: ScrollHandle::new(),
+            text_cache: cx.new(|_cx| GridTextCache::default()),
             focus: cx.focus_handle(),
         };
 
@@ -309,6 +322,7 @@ impl SheetView {
         self.editing = false;
         self.edit_target = None;
         self.dirty = true;
+        self.text_cache.update(cx, |cache, _cx| cache.invalidate_for_sheet());
         cx.notify();
     }
 
@@ -349,6 +363,7 @@ impl SheetView {
                 },
             );
             self.dirty = true;
+            self.text_cache.update(cx, |cache, _cx| cache.invalidate_for_sheet());
             cx.notify();
         }
     }
@@ -484,10 +499,7 @@ impl Focusable for SheetView {
 impl Render for SheetView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let this = cx.entity();
-        let this_for_list = this.clone();
         let c = ThemeColors::current();
-        let rownum_c = c.clone();
-        let data_c = c.clone();
         let book = self.workbook();
         let sheet = self.current_sheet();
         // 数据区虚拟化闭包需要 owned 副本（闭包是 'static，且不能捕获 &self）。
@@ -505,6 +517,9 @@ impl Render for SheetView {
         let max_row = sheet.cells.keys().cloned().max().unwrap_or(0);
         let cols = DEF_COLS.max(sheet.cols).max(max_col + 1);
         let rows = DEF_ROWS.max(sheet.rows).max(max_row + 1);
+        // 整表尺寸（canvas 用整表尺寸，靠滚动容器平移视口，每帧只画可见切片）。
+        let total_w = cols as f32 * CELL_W;
+        let total_h = rows as f32 * CELL_H;
 
         let editing = self.editing;
         let selected = self.selected;
@@ -678,8 +693,10 @@ impl Render for SheetView {
             //   ├─────────┼──────────────────────────┤
             //   │行号(纵滚)│ 数据区（双轴滚，滚动渲染） │
             //   └─────────┴──────────────────────────┘
-            // 行号列与数据区共享同一 `vscroll` 滚动手柄 → 纵向天然同步；
-            // 列标头与数据区同处一个横向滚动容器 → 横向对齐。
+            // 3 个滚动容器共享 2 个 ScrollHandle：
+            //   row-scroll   → 仅 track vscroll（行号纵向同步）
+            //   col-scroll   → 仅 track hscroll（列标头横向滚动，DOM 字母）
+            //   data-scroll  → 仅 track vscroll（数据区纵向同步；横向 GPUI 不平移，手动读 hscroll 偏移）
             .child(
                 div()
                     .id("sheet-body")
@@ -706,34 +723,69 @@ impl Render for SheetView {
                                     .border_color(c.border)
                                     .bg(c.sidebar_bg),
                             )
-                            // 行号列：纵向虚拟化滚动（仅渲染可见行），与数据区共享 vscroll → 纵向同步
-                            .child(
-                                uniform_list("row-numbers", rows, move |range, _window, _cx| {
-                                    let c = &rownum_c;
-                                    range
-                                        .map(|row| render_row_number(row, selected, c))
-                                        .collect::<Vec<_>>()
-                                })
-                                .flex_1()
-                                .min_h(px(400.))
-                                .track_scroll(self.vscroll.clone()),
-                            ),
-                    )
-                    // ── 右侧滚动区：列标头（冻结顶）+ 数据区（双轴），同处一个横向滚动容器 ──
-                    .child(
-                        div()
-                            .id("grid-hscroll")
-                            .flex_1()
-                            .min_w_0()
-                            .overflow_x_scroll()
-                            .overflow_y_hidden()
+                            // 行号列：单 canvas 命令式绘制可见行号，与数据区共享 vscroll → 纵向同步
                             .child(
                                 div()
-                                    .flex()
-                                    .flex_col()
-                                    .w(px(cols as f32 * CELL_W))
-                                    .h_full()
-                                    // 列标头（冻结在顶，横向随数据）
+                                    .id("row-canvas")
+                                    .flex_1()
+                                    .min_h_0()
+                                    .overflow_y_scroll()
+                                    .track_scroll(&self.vscroll)
+                                    .child(
+                                        canvas(
+                                            {
+                                                let v = self.vscroll.clone();
+                                                move |_b, _w, _cx| {
+                                                    let vp = v.bounds().size;
+                                                    let voff = v.offset();
+                                                    let viewport_h: f32 = vp.height.into();
+                                                    let scrolled_y: f32 = (-voff.y).into();
+                                                    compute_visible_window(
+                                                        HEADER_W, viewport_h, 0.0, scrolled_y, 1, rows,
+                                                    )
+                                                }
+                                            },
+                                            {
+                                                let theme = c;
+                                                let selected = selected;
+                                                move |_b, win: VisibleWindow, window, cx| {
+                                                    window.paint_quad(gpui::fill(_b, theme.sidebar_bg));
+                                                    for r in win.r0..win.r1 {
+                                                        // Y 由 GPUI 随 vscroll 自动平移，画 content 坐标即可。
+                                                        let y = row_top(r);
+                                                        paint_row_number(
+                                                            window,
+                                                            cx,
+                                                            y,
+                                                            r,
+                                                            selected.map(|(_, sr)| sr) == Some(r),
+                                                            &theme,
+                                                        );
+                                                    }
+                                                }
+                                            },
+                                        )
+                                        .w(px(HEADER_W))
+                                        .h(px(total_h)),
+                                    ),
+                            ),
+                    )
+                    // ── 右侧滚动区：列标头（横向滚）+ 数据区（纵向滚，横向手动） ──
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .flex_1()
+                            .min_w_0()
+                            // 列标头：横向滚动容器，track hscroll（DOM 字母），与数据区像素级对齐
+                            .child(
+                                div()
+                                    .id("grid-hscroll")
+                                    .h(px(COL_HEADER_H))
+                                    .flex_shrink_0()
+                                    .overflow_x_scroll()
+                                    .overflow_y_hidden()
+                                    .track_scroll(&self.hscroll)
                                     .child(
                                         div()
                                             .flex()
@@ -768,28 +820,129 @@ impl Render for SheetView {
                                                     })
                                                     .child(SharedString::from(col_name(col)))
                                             })),
-                                    )
-                                    // 数据区：纵向虚拟化滚动（仅渲染可见行），横向滚动由外层
-                                    // #grid-hscroll 负责；与行号共享 vscroll → 纵向同步
+                                    ),
+                            )
+                            // 数据区：单 canvas 命令式绘制可见切片，每帧零单元格 DOM 节点
+                            .child(
+                                div()
+                                    .id("data-scroll")
+                                    .flex_1()
+                                    .min_h_0()
+                                    .overflow_y_scroll()
+                                    .overflow_x_hidden()
+                                    .track_scroll(&self.vscroll)
+                                    .on_mouse_down(MouseButton::Left, {
+                                        let this = this.clone();
+                                        let h = self.hscroll.clone();
+                                        let v = self.vscroll.clone();
+                                        let cols = cols;
+                                        let rows = rows;
+                                        move |event: &MouseDownEvent, window: &mut Window,
+                                              cx: &mut App| {
+                                            // event.position 相对 data-scroll 视口；
+                                            // 换算回 content 坐标需加上已滚动偏移。
+                                            let scrolled_x: f32 = f32::from(-h.offset().x);
+                                            let scrolled_y: f32 = f32::from(-v.offset().y);
+                                            let content_x: f32 =
+                                                f32::from(event.position.x) + scrolled_x;
+                                            let content_y: f32 =
+                                                f32::from(event.position.y) + scrolled_y;
+                                            let mut c = 0usize;
+                                            let mut x = 0.0;
+                                            while c + 1 < cols && x + col_width(c) <= content_x {
+                                                x += col_width(c);
+                                                c += 1;
+                                            }
+                                            let mut r = 0usize;
+                                            let mut y = 0.0;
+                                            while r + 1 < rows && y + row_height(r) <= content_y {
+                                                y += row_height(r);
+                                                r += 1;
+                                            }
+                                            let entity = this.clone();
+                                            if event.click_count >= 2 {
+                                                entity.update(cx, |v, cx| {
+                                                    v.begin_edit(window, cx, None)
+                                                });
+                                            } else {
+                                                entity.update(cx, |v, cx| {
+                                                    v.select_cell(c, r, cx)
+                                                });
+                                            }
+                                        }
+                                    })
                                     .child(
-                                        uniform_list("sheet-rows", rows, move |range, _window, _cx| {
-                                            let this = this_for_list.clone();
-                                            let cells = &data_cells;
-                                            let c = &data_c;
-                                            range
-                                                .map(|row| {
-                                                    render_data_row(
-                                                        row, this.clone(), cells, selected, c, cols, editing,
+                                        canvas(
+                                            {
+                                                let h = self.hscroll.clone();
+                                                let v = self.vscroll.clone();
+                                                move |_b, _w, _cx| {
+                                                    let vp = v.bounds().size;
+                                                    let voff = v.offset();
+                                                    let hoff = h.offset();
+                                                    let viewport_w: f32 = vp.width.into();
+                                                    let viewport_h: f32 = vp.height.into();
+                                                    let scrolled_x: f32 = (-hoff.x).into();
+                                                    let scrolled_y: f32 = (-voff.y).into();
+                                                    compute_visible_window(
+                                                        viewport_w, viewport_h, scrolled_x,
+                                                        scrolled_y, cols, rows,
                                                     )
-                                                })
-                                                .collect::<Vec<_>>()
-                                        })
-                                        .flex_1()
-                                        .min_h(px(400.))
-                                        .track_scroll(self.vscroll.clone())
-                                        .with_horizontal_sizing_behavior(
-                                            ListHorizontalSizingBehavior::FitList,
-                                        ),
+                                                }
+                                            },
+                                            {
+                                                let cache = self.text_cache.clone();
+                                                let theme = c;
+                                                let selected = selected;
+                                                let editing = editing;
+                                                let edit_target = self.edit_target;
+                                                let cells = data_cells.clone();
+                                                move |_b, win: VisibleWindow, window, cx| {
+                                                    window.paint_quad(gpui::fill(_b, theme.content_bg));
+                                                    for r in win.r0..win.r1 {
+                                                        for c in win.c0..win.c1 {
+                                                            // 数据 canvas 只被 GPUI 随 vscroll 平移 Y；
+                                                            // 横向不平移，需手动减去已向左滚动的距离。
+                                                            let x = col_left(c) - win.scroll_x;
+                                                            // Y 画 content 坐标，GPUI 随 vscroll 自动平移。
+                                                            let y = row_top(r);
+                                                            let cb = Bounds::new(
+                                                                point(px(x), px(y)),
+                                                                size(px(CELL_W), px(CELL_H)),
+                                                            );
+                                                            let is_sel = selected == Some((c, r));
+                                                            paint_cell_background(
+                                                                window, cx, cb, is_sel, &theme,
+                                                            );
+                                                            // 编辑中的目标格在 canvas 上留白，文字走公式栏。
+                                                            let is_editing_this = editing
+                                                                && edit_target == Some((c, r));
+                                                            if !is_editing_this {
+                                                                if let Some(text) = cells
+                                                                    .get(&r)
+                                                                    .and_then(|m| m.get(&c))
+                                                                    .map(|cell| format_cell(&cell.value))
+                                                                    .filter(|s| !s.is_empty())
+                                                                {
+                                                                    let origin = point(
+                                                                        px(x + CELL_PAD),
+                                                                        px(y + (CELL_H - CELL_FONT_SIZE) / 2.0),
+                                                                    );
+                                                                    cache.update(cx, |cache, cx| {
+                                                                        paint_cell_text(
+                                                                            window, cx, cache, origin, r, c,
+                                                                            &text, &theme,
+                                                                        );
+                                                                    });
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                        )
+                                        .w(px(total_w))
+                                        .h(px(total_h)),
                                     ),
                             ),
                     ),
@@ -870,84 +1023,3 @@ impl Render for SheetView {
     }
 }
 
-/// 渲染数据区的一整行（仅单元格，不含行号；行号由左侧独立列渲染）。
-/// 每个单元格直接作为普通 div 渲染（非虚拟化滚动），保证所有格子稳定可见。
-/// `cells` 为稀疏存储，未写入的格子直接渲染为空白（不占结构、不占存储）。
-fn render_data_row(
-    row: usize,
-    this: Entity<SheetView>,
-    cells: &HashMap<usize, HashMap<usize, Cell>>,
-    selected: Option<(usize, usize)>,
-    c: &ThemeColors,
-    cols: usize,
-    _editing: bool,
-) -> AnyElement {
-    div()
-        .id(SharedString::from(format!("sheet-row-{row}")))
-        .flex()
-        .flex_row()
-        .h(px(CELL_H))
-        .w(px(cols as f32 * CELL_W))
-        .flex_shrink_0()
-        .children((0..cols).map(|col| {
-            let is_selected = selected == Some((col, row));
-            let value = cells
-                .get(&row)
-                .and_then(|row_map| row_map.get(&col))
-                .map(|cell| format_cell(&cell.value))
-                .unwrap_or_default();
-            let on_sel = this.clone();
-            div()
-                .id(SharedString::from(format!("cell-{row}-{col}")))
-                .w(px(CELL_W))
-                .h(px(CELL_H))
-                .flex_shrink_0()
-                .flex()
-                .items_center()
-                .px(px(4.))
-                .border_r_1()
-                .border_b_1()
-                .border_color(c.border)
-                .when(is_selected, |d| d.border_2().border_color(c.accent))
-                .text_sm()
-                .text_color(c.text_primary)
-                .child(SharedString::from(value))
-                // 单击选中。
-                .on_click(move |_, _, cx: &mut App| {
-                    let _ = on_sel.update(cx, |v, cx| v.select_cell(col, row, cx));
-                })
-                // 双击进入编辑（与编辑栏同一套输入框，IME 正常）。
-                .on_mouse_down(MouseButton::Left, {
-                    let on_edit = this.clone();
-                    move |event: &MouseDownEvent, window, cx| {
-                        if event.click_count >= 2 {
-                            let _ =
-                                on_edit.update(cx, |v, cx| v.begin_edit(window, cx, None));
-                        }
-                    }
-                })
-        }))
-        .into_any_element()
-}
-
-/// 渲染左侧行号列的一行（冻结在左，纵向随数据滚动，与数据区共享 `vscroll`）。
-fn render_row_number(row: usize, selected: Option<(usize, usize)>, c: &ThemeColors) -> AnyElement {
-    let row_sel = selected.map(|(_, sr)| sr) == Some(row);
-    div()
-        .id(SharedString::from(format!("rownum-{row}")))
-        .flex()
-        .flex_row()
-        .w(px(HEADER_W))
-        .h(px(CELL_H))
-        .flex_shrink_0()
-        .items_center()
-        .justify_center()
-        .border_r_1()
-        .border_b_1()
-        .border_color(c.border)
-        .bg(if row_sel { rgba(0x0a84ff18) } else { c.sidebar_bg })
-        .text_xs()
-        .text_color(if row_sel { c.accent } else { c.text_muted })
-        .child(SharedString::from(format!("{}", row + 1)))
-        .into_any_element()
-}

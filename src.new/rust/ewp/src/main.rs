@@ -5,6 +5,8 @@ mod ewp_actions;
 mod extension;
 mod model;
 mod settings_view;
+mod sheet_grid;
+mod sheet_grid_cache;
 mod sheet_view;
 mod slide_view;
 mod styles;
