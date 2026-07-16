@@ -487,8 +487,19 @@ impl Render for SheetView {
         let c = ThemeColors::current();
         let book = self.workbook();
         let sheet = self.current_sheet();
-        let cols = sheet.cols.max(1);
-        let rows = sheet.rows.max(1);
+        // 网格范围 = 声明范围(cols/rows) 与 实际已写入单元格边界 的较大者，且不低于默认空白网格。
+        // 旧版 .ewp 未持久化 cols/rows（反序列化后为 0），若只取 max(1) 会塌缩成 1×1，
+        // 表现为「单元格不显示」。这里按已写入的最大行列 +1 兜底，保证始终有可用的网格。
+        let max_col = sheet
+            .cells
+            .values()
+            .flat_map(|row_map| row_map.keys())
+            .cloned()
+            .max()
+            .unwrap_or(0);
+        let max_row = sheet.cells.keys().cloned().max().unwrap_or(0);
+        let cols = DEF_COLS.max(sheet.cols).max(max_col + 1);
+        let rows = DEF_ROWS.max(sheet.rows).max(max_row + 1);
 
         let editing = self.editing;
         let addr = match self.selected {
