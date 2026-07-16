@@ -29,9 +29,8 @@
 //! 创建该格（仿 Apple Numbers 的动态网格）。这就是「用户如何新建单元格」。
 
 use gpui::{
-    AnyElement, App, Context, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent,
-    ListHorizontalSizingBehavior, MouseButton, MouseDownEvent, Render, SharedString,
-    UniformListScrollHandle, Window, div, px, rgba, uniform_list,
+    AnyElement, App, Context, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent, MouseButton,
+    MouseDownEvent, Render, ScrollHandle, SharedString, Window, div, px, rgba,
 };
 use gpui::prelude::*;
 use gpui_component::input::{Input, InputEvent, InputState};
@@ -143,8 +142,8 @@ pub struct SheetView {
     /// 编辑栏输入框（gpui-component 单线 Input，自带光标/选区/IME）。
     edit_input: Entity<InputState>,
 
-    /// 纵向虚拟滚动手柄（uniform_list 使用）。
-    list_scroll: UniformListScrollHandle,
+    /// 纵向滚动手柄：数据区与行号列共享，实现冻结窗格的纵向同步滚动。
+    vscroll: ScrollHandle,
 
     focus: FocusHandle,
 }
@@ -215,7 +214,7 @@ impl SheetView {
             editing: false,
             edit_target: None,
             edit_input,
-            list_scroll: UniformListScrollHandle::default(),
+            vscroll: ScrollHandle::new(),
             focus: cx.focus_handle(),
         };
 
@@ -670,9 +669,9 @@ impl Render for SheetView {
             //   ┌─────────┬──────────────────────────┐
             //   │ 角(固定)│ 列标头（仅横向滚，冻结顶） │
             //   ├─────────┼──────────────────────────┤
-            //   │行号(纵滚)│ 数据区（双轴滚，虚拟渲染） │
+            //   │行号(纵滚)│ 数据区（双轴滚，滚动渲染） │
             //   └─────────┴──────────────────────────┘
-            // 行号列与数据区共享同一 `list_scroll` → 纵向天然同步；
+            // 行号列与数据区共享同一 `vscroll` 滚动手柄 → 纵向天然同步；
             // 列标头与数据区同处一个横向滚动容器 → 横向对齐。
             .child(
                 div()
@@ -700,29 +699,21 @@ impl Render for SheetView {
                                     .border_color(c.border)
                                     .bg(c.sidebar_bg),
                             )
-                            // 行号列：uniform_list 纵向虚拟，与数据区共享 list_scroll
+                            // 行号列：纵向滚动，与数据区共享 vscroll → 纵向同步
                             .child(
                                 div()
-                                    .flex_1()
                                     .min_h_0()
-                                    .child(
-                                        uniform_list(
-                                            "row-numbers",
-                                            rows,
-                                            {
-                                                let c = c.clone();
-                                                let selected = self.selected;
-                                                move |range, _window, _cx| {
-                                                    range
-                                                        .map(|row| {
-                                                            render_row_number(row, selected, &c)
-                                                        })
-                                                        .collect::<Vec<AnyElement>>()
-                                                }
-                                            },
-                                        )
-                                        .track_scroll(self.list_scroll.clone()),
-                                    ),
+                                    .id("sheet-rownum")
+                                    .flex()
+                                    .flex_col()
+                                    .flex_1()
+                                    .overflow_y_scroll()
+                                    .track_scroll(&self.vscroll)
+                                    .children((0..rows).map(|row| {
+                                        let c = c.clone();
+                                        let selected = self.selected;
+                                        render_row_number(row, selected, &c)
+                                    })),
                             ),
                     )
                     // ── 右侧滚动区：列标头（冻结顶）+ 数据区（双轴），同处一个横向滚动容器 ──
@@ -775,42 +766,25 @@ impl Render for SheetView {
                                                     .child(SharedString::from(col_name(col)))
                                             })),
                                     )
-                                    // 数据区：uniform_list 纵向虚拟 + 横向由外层滚动
+                                    // 数据区：纵向滚动（非虚拟化，保证单元格可见），与行号共享 vscroll
                                     .child(
                                         div()
-                                            .flex_1()
                                             .min_h_0()
-                                            .child(
-                                                uniform_list(
-                                                    "sheet-rows",
-                                                    rows,
-                                                    {
-                                                        let this = this.clone();
-                                                        let cells = sheet.cells.clone();
-                                                        let selected = self.selected;
-                                                        let c = c.clone();
-                                                        move |range, _window, _cx| {
-                                                            range
-                                                                .map(|row| {
-                                                                    render_data_row(
-                                                                        row,
-                                                                        this.clone(),
-                                                                        &cells,
-                                                                        selected,
-                                                                        &c,
-                                                                        cols,
-                                                                        editing,
-                                                                    )
-                                                                })
-                                                                .collect::<Vec<AnyElement>>()
-                                                        }
-                                                    },
+                                            .id("sheet-cells")
+                                            .flex()
+                                            .flex_col()
+                                            .flex_1()
+                                            .overflow_y_scroll()
+                                            .track_scroll(&self.vscroll)
+                                            .children((0..rows).map(|row| {
+                                                let this = this.clone();
+                                                let cells = sheet.cells.clone();
+                                                let selected = self.selected;
+                                                let c = c.clone();
+                                                render_data_row(
+                                                    row, this, &cells, selected, &c, cols, editing,
                                                 )
-                                                .track_scroll(self.list_scroll.clone())
-                                                .with_horizontal_sizing_behavior(
-                                                    ListHorizontalSizingBehavior::Unconstrained,
-                                                ),
-                                            ),
+                                            })),
                                     ),
                             ),
                     ),
@@ -892,7 +866,7 @@ impl Render for SheetView {
 }
 
 /// 渲染数据区的一整行（仅单元格，不含行号；行号由左侧独立列渲染）。
-/// 由 `uniform_list` 仅对可见行调用，因此行数再大也不会一次性构建全部单元格。
+/// 每个单元格直接作为普通 div 渲染（非虚拟化滚动），保证所有格子稳定可见。
 /// `cells` 为稀疏存储，未写入的格子直接渲染为空白（不占结构、不占存储）。
 fn render_data_row(
     row: usize,
@@ -951,7 +925,7 @@ fn render_data_row(
         .into_any_element()
 }
 
-/// 渲染左侧行号列的一行（冻结在左，纵向随数据滚动，与数据区共享 `list_scroll`）。
+/// 渲染左侧行号列的一行（冻结在左，纵向随数据滚动，与数据区共享 `vscroll`）。
 fn render_row_number(row: usize, selected: Option<(usize, usize)>, c: &ThemeColors) -> AnyElement {
     let row_sel = selected.map(|(_, sr)| sr) == Some(row);
     div()
