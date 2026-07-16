@@ -29,8 +29,9 @@
 //! 创建该格（仿 Apple Numbers 的动态网格）。这就是「用户如何新建单元格」。
 
 use gpui::{
-    AnyElement, App, Context, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent, MouseButton,
-    MouseDownEvent, Render, ScrollHandle, SharedString, Window, div, px, rgba,
+    AnyElement, App, Context, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent,
+    ListHorizontalSizingBehavior, MouseButton, MouseDownEvent, Render, SharedString,
+    UniformListScrollHandle, Window, div, px, rgba, uniform_list,
 };
 use gpui::prelude::*;
 use gpui_component::input::{Input, InputEvent, InputState};
@@ -143,7 +144,7 @@ pub struct SheetView {
     edit_input: Entity<InputState>,
 
     /// 纵向滚动手柄：数据区与行号列共享，实现冻结窗格的纵向同步滚动。
-    vscroll: ScrollHandle,
+    vscroll: UniformListScrollHandle,
 
     focus: FocusHandle,
 }
@@ -214,7 +215,7 @@ impl SheetView {
             editing: false,
             edit_target: None,
             edit_input,
-            vscroll: ScrollHandle::new(),
+            vscroll: UniformListScrollHandle::new(),
             focus: cx.focus_handle(),
         };
 
@@ -483,9 +484,14 @@ impl Focusable for SheetView {
 impl Render for SheetView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let this = cx.entity();
+        let this_for_list = this.clone();
         let c = ThemeColors::current();
+        let rownum_c = c.clone();
+        let data_c = c.clone();
         let book = self.workbook();
         let sheet = self.current_sheet();
+        // 数据区虚拟化闭包需要 owned 副本（闭包是 'static，且不能捕获 &self）。
+        let data_cells = sheet.cells.clone();
         // 网格范围 = 声明范围(cols/rows) 与 实际已写入单元格边界 的较大者，且不低于默认空白网格。
         // 旧版 .ewp 未持久化 cols/rows（反序列化后为 0），若只取 max(1) 会塌缩成 1×1，
         // 表现为「单元格不显示」。这里按已写入的最大行列 +1 兜底，保证始终有可用的网格。
@@ -501,6 +507,7 @@ impl Render for SheetView {
         let rows = DEF_ROWS.max(sheet.rows).max(max_row + 1);
 
         let editing = self.editing;
+        let selected = self.selected;
         let addr = match self.selected {
             Some((col, row)) => format!("{} {}", col_name(col), row + 1),
             None => "—".to_string(),
@@ -699,21 +706,17 @@ impl Render for SheetView {
                                     .border_color(c.border)
                                     .bg(c.sidebar_bg),
                             )
-                            // 行号列：纵向滚动，与数据区共享 vscroll → 纵向同步
+                            // 行号列：纵向虚拟化滚动（仅渲染可见行），与数据区共享 vscroll → 纵向同步
                             .child(
-                                div()
-                                    .min_h_0()
-                                    .id("sheet-rownum")
-                                    .flex()
-                                    .flex_col()
-                                    .flex_1()
-                                    .overflow_y_scroll()
-                                    .track_scroll(&self.vscroll)
-                                    .children((0..rows).map(|row| {
-                                        let c = c.clone();
-                                        let selected = self.selected;
-                                        render_row_number(row, selected, &c)
-                                    })),
+                                uniform_list("row-numbers", rows, move |range, _window, _cx| {
+                                    let c = &rownum_c;
+                                    range
+                                        .map(|row| render_row_number(row, selected, c))
+                                        .collect::<Vec<_>>()
+                                })
+                                .flex_1()
+                                .min_h(px(400.))
+                                .track_scroll(self.vscroll.clone()),
                             ),
                     )
                     // ── 右侧滚动区：列标头（冻结顶）+ 数据区（双轴），同处一个横向滚动容器 ──
@@ -766,25 +769,27 @@ impl Render for SheetView {
                                                     .child(SharedString::from(col_name(col)))
                                             })),
                                     )
-                                    // 数据区：纵向滚动（非虚拟化，保证单元格可见），与行号共享 vscroll
+                                    // 数据区：纵向虚拟化滚动（仅渲染可见行），横向滚动由外层
+                                    // #grid-hscroll 负责；与行号共享 vscroll → 纵向同步
                                     .child(
-                                        div()
-                                            .min_h_0()
-                                            .id("sheet-cells")
-                                            .flex()
-                                            .flex_col()
-                                            .flex_1()
-                                            .overflow_y_scroll()
-                                            .track_scroll(&self.vscroll)
-                                            .children((0..rows).map(|row| {
-                                                let this = this.clone();
-                                                let cells = sheet.cells.clone();
-                                                let selected = self.selected;
-                                                let c = c.clone();
-                                                render_data_row(
-                                                    row, this, &cells, selected, &c, cols, editing,
-                                                )
-                                            })),
+                                        uniform_list("sheet-rows", rows, move |range, _window, _cx| {
+                                            let this = this_for_list.clone();
+                                            let cells = &data_cells;
+                                            let c = &data_c;
+                                            range
+                                                .map(|row| {
+                                                    render_data_row(
+                                                        row, this.clone(), cells, selected, c, cols, editing,
+                                                    )
+                                                })
+                                                .collect::<Vec<_>>()
+                                        })
+                                        .flex_1()
+                                        .min_h(px(400.))
+                                        .track_scroll(self.vscroll.clone())
+                                        .with_horizontal_sizing_behavior(
+                                            ListHorizontalSizingBehavior::FitList,
+                                        ),
                                     ),
                             ),
                     ),
