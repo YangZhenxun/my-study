@@ -32,7 +32,11 @@ pub struct VisibleWindow {
     /// 纵向滚动由 GPUI 随 `vscroll` 自动平移 canvas 子元素，无需在此记录。
     pub scroll_x: f32,
     /// 已向下滚动的纵向距离（正数）。
-    /// 用于 paint 闭包内 Y 坐标减去 scroll_y，抵消 GPUI 平移，使首可见行从 y≈0 开始。
+    /// 注意：paint 闭包当前不再使用 scroll_y——canvas 是 `track_scroll(vscroll)` 子元素，
+    /// GPUI 已自动按 `vscroll.offset()` 平移内容，手动减去会双重计数。字段保留以维持
+    /// `VisibleWindow` 结构稳定（`compute_visible_window` 仍会写入此字段），用
+    /// `#[allow(dead_code)]` 抑制未读取警告。
+    #[allow(dead_code)]
     pub scroll_y: f32,
 }
 
@@ -98,35 +102,6 @@ pub fn compute_visible_window(
         r1: r1.max(r0 + 1),
         scroll_x,
         scroll_y,
-    }
-}
-
-/// 仅计算 X 轴可见列（Y 轴返回全范围 0..total_rows）。
-///
-/// 用于数据 canvas：Y 轴滚动由 GPUI `with_element_offset()` 自动处理，
-/// 我们只需画出所有行，GPUI 负责裁剪/偏移。X 轴仍需手动处理。
-pub fn compute_visible_cols(
-    scroll_x: f32,
-    total_cols: usize,
-) -> VisibleWindow {
-    let mut c0 = 0usize;
-    let mut x = 0.0;
-    while c0 < total_cols && x + col_width(c0) <= scroll_x {
-        x += col_width(c0);
-        c0 += 1;
-    }
-    let mut c1 = c0;
-    // 无 viewport_w 约束时，显示所有剩余列
-    while c1 < total_cols {
-        c1 += 1;
-    }
-    VisibleWindow {
-        c0,
-        c1: c1.max(c0 + 1),
-        r0: 0,   // Y 轴全范围——由 GPUI content_mask 裁剪
-        r1: usize::MAX, // 上限在 paint 循环中由 rows 约束
-        scroll_x,
-        scroll_y: 0.0,
     }
 }
 
@@ -319,5 +294,36 @@ mod tests {
         assert_eq!(w.r0, 0);
         assert!(w.c1 >= w.c0 + 1);
         assert!(w.r1 >= w.r0 + 1);
+    }
+
+    // ── 任务规格回归：250×60 视口、5×5 表、无滚动 ──
+    // 250 宽覆盖 2.5 列(含第 3 列起点) -> c0=0,c1=3；
+    // 60 高覆盖 2.14 行(含第 3 行起点) -> r0=0,r1=3。
+    #[test]
+    fn visible_window_task_spec_origin() {
+        let w = compute_visible_window(250.0, 60.0, 0.0, 0.0, 5, 5);
+        assert_eq!(w.c0, 0, "X 无滚动");
+        assert_eq!(w.c1, 3, "250 宽覆盖 2.5 列 -> 独占上界 3（列 0,1,2 可见）");
+        assert_eq!(w.r0, 0, "Y 无滚动");
+        assert_eq!(w.r1, 3, "60 高覆盖 2.14 行 -> 独占上界 3（行 0,1,2 可见）");
+        assert_eq!(w.scroll_x, 0.0);
+        assert_eq!(w.scroll_y, 0.0);
+    }
+
+    // ── 任务规格回归：纵向滚动 28（滚过 1 行）、视口高 60 ──
+    // scroll_y=28 -> 第 0 行 bottom=28 <= scroll_y 被跳过 -> r0=1。
+    // 视口窗口 [28, 88]：行1 top28/bottom56、行2 top56/bottom84、行3 top84/bottom112
+    // 均进入视口（行3 在 84..88 部分可见，必须绘制）-> 绘制索引 1,2,3 -> 独占上界 r1=4。
+    //
+    // 注：任务描述写 r1==3，但按算法独占上界正确值为 4（部分可见行须绘制，
+    // 否则视口底部 84..88 出现 4px 空白）。此处锁定正确值 4 以防回归。
+    #[test]
+    fn visible_window_task_spec_vertical_scroll() {
+        let w = compute_visible_window(250.0, 60.0, 0.0, 28.0, 5, 5);
+        assert_eq!(w.r0, 1, "第 0 行 bottom=28 <= scroll_y 被跳过");
+        assert_eq!(
+            w.r1, 4,
+            "行3 top=84 落入视口[28,88] 部分可见须绘制 -> 独占上界 r1=4"
+        );
     }
 }

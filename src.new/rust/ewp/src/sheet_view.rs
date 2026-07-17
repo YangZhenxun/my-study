@@ -30,7 +30,7 @@
 
 use gpui::{
     App, Bounds, Context, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent, MouseButton,
-    MouseDownEvent, Render, ScrollHandle, SharedString, TextRun, Window, canvas, div, fill, point, px, rgba, size,
+    MouseDownEvent, Render, ScrollHandle, SharedString, TextRun, Window, canvas, div, point, px, rgba, size,
 };
 use gpui::prelude::*;
 use gpui_component::input::{Input, InputEvent, InputState};
@@ -42,7 +42,7 @@ use crate::model::ser::NativeFormat;
 use crate::model::sheet::{Cell, CellValue, Sheet, Workbook};
 use crate::model::Model;
 use crate::sheet_grid::{
-    VisibleWindow, col_left, col_width, compute_visible_cols,
+    VisibleWindow, col_left, col_width,
     compute_visible_window, paint_cell_background,
     paint_row_number, row_height, row_top,
 };
@@ -739,7 +739,9 @@ impl Render for SheetView {
                                                 move |_b, _w, _cx| {
                                                     let vp = v.bounds().size;
                                                     let voff = v.offset();
-                                                    let viewport_w: f32 = vp.width.into();
+                                                    // viewport_w 未直接使用：行号列视口宽恒为 HEADER_W，
+                                                    // 直接传给 compute_visible_window；保留读取仅为清晰表达意图。
+                                                    let _viewport_w: f32 = vp.width.into();
                                                     let viewport_h: f32 = vp.height.into();
                                                     let scrolled_y: f32 = (-voff.y).into();
                                                     compute_visible_window(
@@ -752,12 +754,13 @@ impl Render for SheetView {
                                                 let selected = selected;
                                                 move |_b, win: VisibleWindow, window, cx| {
                                                     window.paint_quad(gpui::fill(_b, theme.sidebar_bg));
-                                                    // Y 坐标减去 win.scroll_y，抵消 GPUI 随 vscroll 的向上平移。
-                                                    // 使首可见行始终从 y≈0 开始，消除顶部空白。
-                                                    // （GPUI 把 canvas 内容整体平移了 offset.y；我们反向偏移让
-                                                    //   可见区域对齐到视口顶部，与点击事件坐标空间一致。）
+                                                    // Y 使用真实 content 坐标 row_top(r)。行号 canvas 是
+                                                    // #row-canvas(track_scroll(vscroll)) 的子元素，GPUI 已通过
+                                                    // with_element_offset() 把整块内容按 vscroll.offset() 平移，
+                                                    // 因此 paint 无需、也不应再手动减 scroll_y（否则双重计数 →
+                                                    // 顶部空白 + 点击错位）。r0..r1 裁剪由 compute_visible_window 算出。
                                                     for r in win.r0..win.r1 {
-                                                        let y = row_top(r) - win.scroll_y;
+                                                        let y = row_top(r);
                                                         paint_row_number(
                                                             window,
                                                             cx,
@@ -841,7 +844,9 @@ impl Render for SheetView {
                                     .on_mouse_down(MouseButton::Left, {
                                         let this = this.clone();
                                         let h = self.hscroll.clone();
-                                        let v = self.vscroll.clone();
+                                        // vscroll 不在此闭包内使用：#data-scroll 只 track vscroll，
+                                        // Y 事件坐标已由 GPUI 转成 content 坐标，无需手动读 vscroll。
+                                        let _v = self.vscroll.clone();
                                         let cols = cols;
                                         let rows = rows;
                                         move |event: &MouseDownEvent, window: &mut Window,
@@ -890,9 +895,10 @@ impl Render for SheetView {
                                                     let voff = v.offset();
                                                     // X：#data-scroll 是 overflow_x_hidden，横向滚动由 #grid-hscroll 管理，
                                                         // canvas 内部需手动处理。
-                                                    // Y：GPUI 随 vscroll 将 canvas 向上平移 offset.y，导致首行上方出现空白。
-                                                    //   我们算出可见行范围并从 y≈0 开始绘制（减去 scroll_y 抵消平移），
-                                                    //   使可见区域对齐视口顶部，与点击事件坐标空间一致。
+                                                    // Y：#data-scroll 是 track_scroll(vscroll) 子元素，GPUI 已随 vscroll
+                                                    //   把 canvas 内容整体平移 offset.y；paint 直接画真实 content 坐标
+                                                    //   row_top(r) 即可。scrolled_y 仅用于算出可见行范围 r0..r1
+                                                    //   （compute_visible_window 据此裁剪），不再在 paint 里减去。
                                                     let vp_h = v.bounds().size.height.into();
                                                     let scrolled_x: f32 = (-hoff.x).into();
                                                     let scrolled_y: f32 = (-voff.y).into();
@@ -904,7 +910,9 @@ impl Render for SheetView {
                                                 }
                                             },
                                             {
-                                                let cache = self.text_cache.clone();
+                                                // text_cache 当前未在此闭包内使用（文字走 window.text_system().shape_line），
+                                                // 保留克隆以避免改动结构；前缀 _ 抑制 unused 警告。
+                                                let _cache = self.text_cache.clone();
                                                 let theme = c;
                                                 let selected = selected;
                                                 let editing = editing;
@@ -912,13 +920,16 @@ impl Render for SheetView {
                                                 let cells = data_cells.clone();
                                                 move |_b, win: VisibleWindow, window: &mut Window, cx: &mut App| {
                                                     window.paint_quad(gpui::fill(_b, theme.content_bg));
-                                                    // 画可见行范围（r0..r1），Y 减去 scroll_y 抵消 GPUI 向上平移，
-                                                    // 使首可见行从 y≈0 开始（消除顶部空白）。
-                                                    // X 减去 scroll_x 抵消横向滚动（与列标头对齐）。
+                                                    // X: col_left(c) - win.scroll_x 抵消 #data-scroll 不 track hscroll
+                                                    // 导致的手动横向偏移（与列标头 flex_row 经 hscroll 平移后的位置一致）。
+                                                    // Y: 用真实 content 坐标 row_top(r)。#data-scroll 是 track_scroll(vscroll)
+                                                    // 的子元素，GPUI 已把整块内容按 vscroll.offset() 平移，paint 不再手动
+                                                    // 减 scroll_y（否则双重计数 → 顶部空白 + 点击错位）。r0..r1 裁剪由
+                                                    // compute_visible_window 算出。
                                                     for r in win.r0..win.r1 {
                                                         for c in win.c0..win.c1 {
                                                             let x = col_left(c) - win.scroll_x;
-                                                            let y = row_top(r) - win.scroll_y;
+                                                            let y = row_top(r);
                                                             let cb = Bounds::new(
                                                                 point(px(x), px(y)),
                                                                 size(px(CELL_W), px(CELL_H)),
