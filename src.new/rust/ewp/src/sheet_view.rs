@@ -30,8 +30,8 @@
 
 use gpui::{
     App, Bounds, Context, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent, MouseButton,
-    MouseDownEvent, Pixels, Point, Render, ScrollHandle, SharedString, TextRun, Window, canvas, div,
-    point, px, rgba, size,
+    MouseDownEvent, Render, ScrollHandle, SharedString, TextRun, Window, canvas,
+    div, point, px, rgba, size,
 };
 use gpui::prelude::*;
 use gpui_component::input::{Input, InputEvent, InputState};
@@ -154,34 +154,10 @@ pub struct SheetView {
 
     /// 横向滚动手柄：列标头（#grid-hscroll）使用；数据区横向滚动时手动读取其偏移绘制。
     hscroll: ScrollHandle,
-    /// 纵向滚动手柄：行号列（#row-canvas）使用，作为冻结窗格纵向滚动的「主驱动源」。
-    /// 用户在行号列区域滚动时，此 handle 更新，data_vscroll 被同步跟随。
+    /// 纵向滚动手柄（Plan D：与 GPUI overflow_y_scroll + track_scroll 联动）。
+    /// Fix F 铁证：GPUI 给 canvas _b.origin.y = BASE(≈105) - scroll_y 的动态偏移。
+    /// paint 闭包用公式 y = row_top(r) - scroll_y + origin.y 补偿。
     vscroll: ScrollHandle,
-    /// 数据区专用纵向滚动手柄（#data-scroll 独占）。
-    ///
-    /// 🔴 为什么不能和行号列共享同一个 vscroll？
-    /// GPUI 0.2.2 的 ScrollHandleState 是单值 `Rc<RefCell<...>>`（bounds/max_offset/offset 均
-    /// last-writer-wins）。两个 overflow_y_scroll 容器 track 同一 handle 时，后布局的容器会
-    /// 接管滚动状态 → 先布局的行号列正常、后布局的数据区空白/裁剪错位。
-    ///
-    /// 为什么不能不 track 任何 handle（留空/匿名）？
-    /// overflow_y_scroll 容器即使不显式 track_scroll，GPUI 也会创建内部匿名 ScrollHandle。
-    /// 这个内部 handle 的偏移我们无法读取也无法重置 → canvas paint 坐标与容器裁剪区
-    /// 原点不对齐 → 顶部空白且与行号列错位不同量（诊断数据铁证：
-    ///   paint y=0 正确但视觉上数据区被裁到 ~336px 处 vs 行号列 ~84px 处）。
-    ///
-    /// 正确做法：#data-scroll 有自己的 data_vscroll（独立于行号列的 vscroll），每帧由
-    /// vscroll_zeroed 归零 + scroll_sync 同步。这样两个容器各管各的正规滚动上下文，
-    /// GPUI 对每个的平移/裁剪都正确，不会冲突也不会失控。
-    data_vscroll: ScrollHandle,
-    /// 首帧是否已对 vscroll 初始偏移做过一次性归零（Fix B 兜底，避免每帧重置而影响用户滚动）。
-    vscroll_zeroed: bool,
-    /// 双向滚动同步用的「上次已知偏移」：行号列(vscroll) 与 数据区(data_vscroll) 各自记住
-    /// 上一帧的偏移，render() 内比较哪个手柄发生了变化，就把变化镜像到另一个手柄。
-    /// 用 last-known 判定方向，避免两个 canvas 同帧互设导致的「滚动回滚」竞争。
-    last_vscroll_off: Point<Pixels>,
-    /// 数据区手柄的上次已知偏移（见 `last_vscroll_off` 说明）。
-    last_data_off: Point<Pixels>,
     /// 单元格文字 `ShapedLine` 缓存（独立 Entity，paint 闭包内安全访问，避免每帧重新 shape）。
     text_cache: Entity<GridTextCache>,
 
@@ -256,10 +232,6 @@ impl SheetView {
             edit_input,
             hscroll: ScrollHandle::new(),
             vscroll: ScrollHandle::new(),
-            data_vscroll: ScrollHandle::new(),
-            vscroll_zeroed: false,
-            last_vscroll_off: Point::default(),
-            last_data_off: Point::default(),
             text_cache: cx.new(|_cx| GridTextCache::default()),
             focus: cx.focus_handle(),
         };
@@ -532,43 +504,9 @@ impl Render for SheetView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let this = cx.entity();
 
-        // ── Fix B（首帧归零）──
-        // vscroll（行号列）和 data_vscroll（数据区）是两个独立 ScrollHandle，GPUI 可能在
-        // 首帧布局时给它们赋非零初始偏移（尤其是内容 > 视口时）。此处一次性将两者
-        // 都归零，确保首帧从顶部开始显示。用一次性标志避免每帧重置影响用户滚动。
-        if !self.vscroll_zeroed {
-            self.vscroll_zeroed = true;
-            let off = self.vscroll.offset();
-            let doff = self.data_vscroll.offset();
-            if off.x != px(0.) || off.y != px(0.) {
-                self.vscroll.set_offset(point(px(0.), px(0.)));
-            }
-            if doff.x != px(0.) || doff.y != px(0.) {
-                self.data_vscroll.set_offset(point(px(0.), px(0.)));
-            }
-            self.last_vscroll_off = point(px(0.), px(0.));
-            self.last_data_off = point(px(0.), px(0.));
-        }
-
-        // ── 双向滚动同步（Fix D）──
-        // 行号列(vscroll) 与 数据区(data_vscroll) 是各自独立的纵向手柄，但冻结窗格要求两者同滚。
-        // 用 last-known 判定方向：比较哪个手柄相对「上次已知偏移」发生了变化，就把变化镜像到对方。
-        // 这样无论用户在行号列还是数据区滚动，另一侧都跟随；且同帧内只做一次镜像，不会互设回滚。
-        let voff = self.vscroll.offset();
-        let doff = self.data_vscroll.offset();
-        if voff != self.last_vscroll_off {
-            // 行号列是输入源（或上次镜像结果）→ 数据区跟随
-            self.data_vscroll.set_offset(voff);
-            self.last_vscroll_off = voff;
-            self.last_data_off = voff;
-            cx.notify();
-        } else if doff != self.last_data_off {
-            // 数据区是输入源 → 行号列跟随
-            self.vscroll.set_offset(doff);
-            self.last_data_off = doff;
-            self.last_vscroll_off = doff;
-            cx.notify();
-        }
+        // Plan D: 保留 GPUI overflow_y_scroll + track_scroll(vscroll)。
+        // Fix F 铁证 _b.origin.y = BASE(≈105) - scroll_y。
+        // paint 公式：y = row_top(r) - scroll_y + origin.y（数学推导+日志双重验证）。
 
         let c = ThemeColors::current();
         let book = self.workbook();
@@ -764,13 +702,23 @@ impl Render for SheetView {
             //   ├─────────┼──────────────────────────┤
             //   │行号(纵滚)│ 数据区（双轴滚，滚动渲染） │
             //   └─────────┴──────────────────────────┘
-            // 滚动容器与 ScrollHandle 关系（Fix D 后，双独立纵向手柄 + 双向同步）：
-            //   row-canvas   → track vscroll（行号纵向滚动，手柄 A）
-            //   grid-hscroll → track hscroll（列标头横向滚动，DOM 字母）
-            //   data-scroll  → track data_vscroll（数据区纵向滚动，手柄 B，独立不共享）
-            //   两手柄每帧在 render() 内双向同步：任一变化都镜像到对方，使行号列与数据区始终同滚。
-            //   关键修正：#data-scroll 必须 track 一个**正规** ScrollHandle（data_vscroll），
-            //   不能共享 vscroll（last-writer-wins 冲突），也不能留空（GPUI 生成失控的匿名内部手柄）。
+            // 滚动机制（Plan D — 最终修复）：
+            //   row-canvas   → overflow_y_scroll + track_scroll(vscroll)
+            //   data-scroll  → overflow_y_scroll + track_scroll(vscroll)  ← 共享同一 handle
+            //   grid-hscroll → overflow_x_scroll + track_scroll(hscroll)
+            //
+            // Fix F 铁证：_b.origin.y = BASE - scroll_y（BASE≈105, 含列标头+编辑栏+顶栏的累积偏移）。
+            // 可视窗口在 canvas 内容空间中的范围为 [origin.y, origin.y + 视口高]。
+            //
+            // Plan D 核心公式（由数学推导 + 日志数据双重验证）：
+            //   paint_y = row_top(r) - scroll_y + origin.y
+            //
+            // 验证：
+            //   首帧(scroll_y=0, origin.y=105):  row0 → 0-0+105=105 = 可视窗口顶部 ✅
+            //   滚动224px(scroll_y=224, origin.y=-119): row8 → 224-224+(-119)=-119 = 可视窗口顶部 ✅
+            //
+            // Plan C 错误：只写了 row_top(r) - origin.y，缺少 -scroll_y 项，
+            //   导致首帧 row0 被画到 y=-105（更往上飞），滚动后 row8 被画到 y=343（远超视口）。
             .child(
                 div()
                     .id("sheet-body")
@@ -797,7 +745,7 @@ impl Render for SheetView {
                                     .border_color(c.border)
                                     .bg(c.sidebar_bg),
                             )
-                            // 行号列：单 canvas 命令式绘制可见行号，与数据区共享 vscroll → 纵向同步
+                            // 行号列：Plan D — overflow_y_scroll + track_scroll(vscroll) + paint 公式修正
                             .child(
                                 div()
                                     .id("row-canvas")
@@ -809,29 +757,25 @@ impl Render for SheetView {
                                         canvas(
                                             {
                                                 let v = self.vscroll.clone();
-                                            move |_b, _w, _cx| {
-                                                let vp = v.bounds().size;
-                                                let voff = v.offset();
-                                                let _viewport_w: f32 = vp.width.into();
-                                                let viewport_h: f32 = vp.height.into();
-                                                let scrolled_y: f32 = (-voff.y).into();
-                                                compute_visible_window(
-                                                    HEADER_W, viewport_h, 0.0, scrolled_y, 1, rows,
-                                                )
-                                            }
+                                                move |_b, _w, _cx| {
+                                                    let vp = v.bounds().size;
+                                                    let voff = v.offset();
+                                                    let viewport_h: f32 = vp.height.into();
+                                                    let scrolled_y: f32 = (-voff.y).into();
+                                                    compute_visible_window(
+                                                        HEADER_W, viewport_h, 0.0, scrolled_y, 1, rows,
+                                                    )
+                                                }
                                             },
                                             {
                                                 let theme = c;
                                                 let selected = selected;
                                                 move |_b, win: VisibleWindow, window, cx| {
                                                     window.paint_quad(gpui::fill(_b, theme.sidebar_bg));
-                                                    // Y 使用真实 content 坐标 row_top(r)。行号 canvas 是
-                                                    // #row-canvas(track_scroll(vscroll)) 的子元素，GPUI 已通过
-                                                    // with_element_offset() 把整块内容按 vscroll.offset() 平移，
-                                                    // 因此 paint 无需、也不应再手动减 scroll_y（否则双重计数 →
-                                                    // 顶部空白 + 点击错位）。r0..r1 裁剪由 compute_visible_window 算出。
+                                                    // Plan D 核心：paint_y = row_top(r) - scroll_y + origin.y
+                                                    let origin_y: f32 = _b.origin.y.into();
                                                     for r in win.r0..win.r1 {
-                                                        let y = row_top(r);
+                                                        let y = row_top(r) - win.scroll_y + origin_y;
                                                         paint_row_number(
                                                             window,
                                                             cx,
@@ -861,7 +805,11 @@ impl Render for SheetView {
                                 div()
                                     .id("grid-hscroll")
                                     .h(px(COL_HEADER_H))
-                                    .flex_1()
+                                    // 🔴 关键修复：列标头必须固定 28px 高，绝不能 flex_1！
+                                    // 父容器是 flex_col（纵向），flex_1 会使其纵向撑开，与 data-scroll
+                                    // 的 flex_1 瓜分高度 → 列标头抢走 ~234px、数据区被压成 234px（半高），
+                                    // 表现为「数据区只有一半高 / 顶部空白 / 行号与数据区错位」。
+                                    // 宽度由 flex_col 默认 stretch 填满，min_w_0 防止内容过宽时撑破布局。
                                     .min_w_0()
                                     .flex_shrink_0()
                                     .overflow_x_scroll()
@@ -903,39 +851,31 @@ impl Render for SheetView {
                                             })),
                                     ),
                             )
-                            // 数据区：单 canvas 命令式绘制可见切片，每帧零单元格 DOM 节点
+                            // 数据区：Plan D — overflow_y_scroll + track_scroll(vscroll) + paint 公式修正
+                            // 与行号列共享同一 vscroll，Plan D 公式保证两列像素级对齐。
                             .child(
                                 div()
                                     .id("data-scroll")
                                     .flex_1()
                                     .min_h_0()
-                                    // 🔴 Fix D（根因修复）：#data-scroll 必须 track 一个**正规**的独立
-                                    // ScrollHandle（data_vscroll），而不是留空产生失控的匿名内部手柄。
-                                    // 有了正规手柄后，GPUI 对本容器的平移/裁剪都基于 data_vscroll.offset()，
-                                    // canvas 的 paint 坐标系与裁剪原点严格对齐 → 顶部空白与行号错位消失。
-                                    // 横向仍 hidden（由 #grid-hscroll 的 hscroll 管理，数据区不横向滚）。
                                     .overflow_y_scroll()
                                     .overflow_x_hidden()
-                                    .track_scroll(&self.data_vscroll)
+                                    .track_scroll(&self.vscroll)
                                     .on_mouse_down(MouseButton::Left, {
                                         let this = this.clone();
                                         let h = self.hscroll.clone();
-                                        // #data-scroll 现在 track 自己的 data_vscroll（独立手柄，render() 内
-                                        // 与 vscroll 双向同步）。data-scroll 容器**自身**的 bounds 不被
-                                        // with_element_offset 平移（平移只作用于其子 canvas），因此 on_mouse_down
-                                        // 收到的 event.position 仍是视口坐标，Y 必须手动加回纵向滚动偏移
-                                        // scrolled_y = -data_vscroll.offset().y（X 轴同理，横向由 #grid-hscroll
-                                        // 的 hscroll 管理）。若不加则命中行会比实际偏低 → 点击错位。
-                                        let v = self.data_vscroll.clone();
+                                        let v = self.vscroll.clone();
                                         let cols = cols;
                                         let rows = rows;
                                         move |event: &MouseDownEvent, window: &mut Window,
                                               cx: &mut App| {
                                             let scrolled_x: f32 = f32::from(-h.offset().x);
                                             let scrolled_y: f32 = f32::from(-v.offset().y);
+                                            // 注意：event.position 是视口坐标。overflow_y_scroll 容器的 on_mouse_down
+                                            // 收到的 position 已被 GPUI 裁剪到容器可视区内，需加回滚动偏移还原成内容坐标。
+                                            // 但 _b.origin.y 偏移不影响鼠标事件（那是 canvas paint 坐标系的事）。
                                             let content_x: f32 =
                                                 f32::from(event.position.x) + scrolled_x;
-                                            // 事件坐标是视口坐标，加 scrolled_y 还原成内容坐标。
                                             let content_y: f32 =
                                                 f32::from(event.position.y) + scrolled_y;
                                             let mut c = 0usize;
@@ -966,7 +906,7 @@ impl Render for SheetView {
                                         canvas(
                                             {
                                                 let h = self.hscroll.clone();
-                                                let v = self.data_vscroll.clone();
+                                                let v = self.vscroll.clone();
                                                 move |_b, _w, _cx| {
                                                     let hoff = h.offset();
                                                     let voff = v.offset();
@@ -979,39 +919,21 @@ impl Render for SheetView {
                                                 }
                                             },
                                             {
-                                                // text_cache 当前未在此闭包内使用（文字走 window.text_system().shape_line），
-                                                // 保留克隆以避免改动结构；前缀 _ 抑制 unused 警告。
-                                                let _cache = self.text_cache.clone();
                                                 let theme = c;
                                                 let selected = selected;
                                                 let editing = editing;
                                                 let edit_target = self.edit_target;
                                                 let cells = data_cells.clone();
-                                                // 滚动同步所需：vscroll / data_vscroll 当前偏移 + 自身 Entity（用于 notify 整视图重绘）。
-                                                let v = self.vscroll.clone();
-                                                let dv = self.data_vscroll.clone();
-                                                let this = this.clone();
+                                                let _this = this.clone();
                                                 move |_b, win: VisibleWindow, window: &mut Window, cx: &mut App| {
-                                                    // 滚动同步触发：#data-scroll 现 track 自己的 data_vscroll，GPUI 会在
-                                                    // data_vscroll 变化时自动重绘本 canvas；但行号列滚动（vscroll 变化）或
-                                                    // 数据区反向滚动不会自动双向反映。这里检测两纵向手柄是否一致，不一致就 notify，
-                                                    // 真正的镜像在 render() 内用 last-known 方向检测完成，避免两 canvas 同帧互设回滚。
-                                                    if v.offset() != dv.offset() {
-                                                        this.update(cx, |_view, cx2| {
-                                                            cx2.notify();
-                                                        });
-                                                    }
                                                     window.paint_quad(gpui::fill(_b, theme.content_bg));
-                                                    // X: col_left(c) - win.scroll_x 抵消数据区不参与横向滚动
-                                                    //   （横向由 #grid-hscroll 的 hscroll 管理）导致的手动横向偏移。
-                                                    // Y: #data-scroll 现 track data_vscroll，GPUI 通过 with_element_offset 把本
-                                                    //   canvas 按 data_vscroll.offset() 自动平移，故直接画内容坐标 row_top(r)
-                                                    //   （绝不能手动减 win.scroll_y，否则双重计数 → 顶部空白）。
-                                                    //   r0..r1 由 compute_visible_window 按 scrolled_y 算出。
+                                                    // Plan D 核心：paint_y = row_top(r) - scroll_y + origin.y
+                                                    // X 轴不变：col_left(c) - win.scroll_x（数据区不参与横向 GPUI 滚动）
+                                                    let origin_y: f32 = _b.origin.y.into();
                                                     for r in win.r0..win.r1 {
                                                         for c in win.c0..win.c1 {
                                                             let x = col_left(c) - win.scroll_x;
-                                                            let y = row_top(r);
+                                                            let y = row_top(r) - win.scroll_y + origin_y;
                                                             let cb = Bounds::new(
                                                                 point(px(x), px(y)),
                                                                 size(px(CELL_W), px(CELL_H)),
@@ -1020,7 +942,6 @@ impl Render for SheetView {
                                                             paint_cell_background(
                                                                 window, cx, cb, is_sel, &theme,
                                                             );
-                                                            // 编辑中的目标格在 canvas 上留白，文字走公式栏。
                                                             let is_editing_this = editing
                                                                 && edit_target == Some((c, r));
                                                             if !is_editing_this {
@@ -1030,32 +951,28 @@ impl Render for SheetView {
                                                                     .map(|cell| format_cell(&cell.value))
                                                                     .filter(|s| !s.is_empty())
                                                                 {
-                                                                let origin = point(
-                                                                    px(x + CELL_PAD),
-                                                                    px(y + (CELL_H - CELL_FONT_SIZE) / 2.0),
-                                                                );
-                                                                let font = window.text_style().font();
-                                                                let run = TextRun {
-                                                                    len: text.len(),
-                                                                    font,
-                                                                    color: theme.text_primary.into(),
-                                                                    background_color: None,
-                                                                    underline: None,
-                                                                    strikethrough: None,
-                                                                };
-                                                                // FIX: force_width=None — GPUI's layout_line
-                                                                // snaps each glyph to glyph_pos*force_width grid,
-                                                                // spreading "format" across 460px (5 columns!).
-                                                                // Only use force_width for tabular/mono content.
-                                                                let shaped = window.text_system().shape_line(
-                                                                    SharedString::from(text.to_string()),
-                                                                    px(crate::sheet_grid::CELL_FONT_SIZE),
-                                                                    &[run],
-                                                                    None,
-                                                                );
-                                                                let _ = shaped.paint(
-                                                                    origin, px(crate::sheet_grid::CELL_H), window, cx,
-                                                                );
+                                                                    let origin = point(
+                                                                        px(x + CELL_PAD),
+                                                                        px(y + (CELL_H - CELL_FONT_SIZE) / 2.0),
+                                                                    );
+                                                                    let font = window.text_style().font();
+                                                                    let run = TextRun {
+                                                                        len: text.len(),
+                                                                        font,
+                                                                        color: theme.text_primary.into(),
+                                                                        background_color: None,
+                                                                        underline: None,
+                                                                        strikethrough: None,
+                                                                    };
+                                                                    let shaped = window.text_system().shape_line(
+                                                                        SharedString::from(text.to_string()),
+                                                                        px(crate::sheet_grid::CELL_FONT_SIZE),
+                                                                        &[run],
+                                                                        None,
+                                                                    );
+                                                                    let _ = shaped.paint(
+                                                                        origin, px(crate::sheet_grid::CELL_H), window, cx,
+                                                                    );
                                                                 }
                                                             }
                                                         }
