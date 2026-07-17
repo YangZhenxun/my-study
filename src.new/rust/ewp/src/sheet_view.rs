@@ -520,6 +520,7 @@ impl Render for SheetView {
         if !self.vscroll_zeroed {
             self.vscroll_zeroed = true;
             let off = self.vscroll.offset();
+            eprintln!("[EWP][diag] vscroll_zeroed 首帧检查: offset={:?}, bounds={:?}", off, self.vscroll.bounds().size);
             if off.x != px(0.) || off.y != px(0.) {
                 eprintln!("[EWP][sheet] vscroll 初始偏移非零，已归零: {:?}", off);
                 self.vscroll.set_offset(point(px(0.), px(0.)));
@@ -767,14 +768,18 @@ impl Render for SheetView {
                                                 move |_b, _w, _cx| {
                                                     let vp = v.bounds().size;
                                                     let voff = v.offset();
-                                                    // viewport_w 未直接使用：行号列视口宽恒为 HEADER_W，
-                                                    // 直接传给 compute_visible_window；保留读取仅为清晰表达意图。
                                                     let _viewport_w: f32 = vp.width.into();
                                                     let viewport_h: f32 = vp.height.into();
                                                     let scrolled_y: f32 = (-voff.y).into();
-                                                    compute_visible_window(
+                                                    // [DIAG] 行号列可见窗口诊断（定位顶部空白 + 与数据区错位）
+                                                    let win = compute_visible_window(
                                                         HEADER_W, viewport_h, 0.0, scrolled_y, 1, rows,
-                                                    )
+                                                    );
+                                                    eprintln!(
+                                                        "[EWP][diag] row-canvas: voff.y={:?} scrolled_y={:.1} vp_h={:.1} => r0={} r1={}",
+                                                        voff.y, scrolled_y, viewport_h, win.r0, win.r1,
+                                                    );
+                                                    win
                                                 }
                                             },
                                             {
@@ -926,19 +931,18 @@ impl Render for SheetView {
                                                 move |_b, _w, _cx| {
                                                     let hoff = h.offset();
                                                     let voff = v.offset();
-                                                    // X：#data-scroll 是 overflow_x_hidden，横向滚动由 #grid-hscroll 管理，
-                                                        // canvas 内部需手动处理（paint 里 col_left(c) - win.scroll_x）。
-                                                    // Y：#data-scroll 已不再 track vscroll，不再有 GPUI 自动平移；
-                                                    //   scrolled_y = -voff.y 仅用于 compute_visible_window 算出可见行
-                                                    //   范围 r0..r1，真正的像素偏移在 paint 里用 row_top(r) - win.scroll_y 手动做。
                                                     let vp_h = v.bounds().size.height.into();
                                                     let scrolled_x: f32 = (-hoff.x).into();
                                                     let scrolled_y: f32 = (-voff.y).into();
-                                                    // 用全量 viewport_w（canvas 自身 bounds 是整表尺寸、不能当视口），
-                                                    // X 方向靠 scroll_x 裁剪不可见列。
-                                                    compute_visible_window(
+                                                    // [DIAG] 数据区可见窗口诊断（定位与行号列错位 + 顶部空白）
+                                                    let win = compute_visible_window(
                                                         f32::MAX, vp_h, scrolled_x, scrolled_y, cols, rows,
-                                                    )
+                                                    );
+                                                    eprintln!(
+                                                        "[EWP][diag] data-canvas: voff.y={:?} scrolled_y={:.1} vp_h={:.1} => r0={} r1={} scroll_y={:.1}",
+                                                        voff.y, scrolled_y, vp_h, win.r0, win.r1, win.scroll_y,
+                                                    );
+                                                    win
                                                 }
                                             },
                                             {
