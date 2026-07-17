@@ -31,6 +31,9 @@ pub struct VisibleWindow {
     /// 已向左滚动的横向距离（正数）。
     /// 纵向滚动由 GPUI 随 `vscroll` 自动平移 canvas 子元素，无需在此记录。
     pub scroll_x: f32,
+    /// 已向下滚动的纵向距离（正数）。
+    /// 用于 paint 闭包内 Y 坐标减去 scroll_y，抵消 GPUI 平移，使首可见行从 y≈0 开始。
+    pub scroll_y: f32,
 }
 
 /// 第 `c` 列左边缘的 content 坐标（像素）。列宽恒定时即 `c * CELL_W`。
@@ -94,6 +97,7 @@ pub fn compute_visible_window(
         r0,
         r1: r1.max(r0 + 1),
         scroll_x,
+        scroll_y,
     }
 }
 
@@ -122,6 +126,7 @@ pub fn compute_visible_cols(
         r0: 0,   // Y 轴全范围——由 GPUI content_mask 裁剪
         r1: usize::MAX, // 上限在 paint 循环中由 rows 约束
         scroll_x,
+        scroll_y: 0.0,
     }
 }
 

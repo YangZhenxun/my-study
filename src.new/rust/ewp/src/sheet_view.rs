@@ -739,6 +739,7 @@ impl Render for SheetView {
                                                 move |_b, _w, _cx| {
                                                     let vp = v.bounds().size;
                                                     let voff = v.offset();
+                                                    let viewport_w: f32 = vp.width.into();
                                                     let viewport_h: f32 = vp.height.into();
                                                     let scrolled_y: f32 = (-voff.y).into();
                                                     compute_visible_window(
@@ -749,14 +750,14 @@ impl Render for SheetView {
                                             {
                                                 let theme = c;
                                                 let selected = selected;
-                                                let rows = rows;
-                                                move |_b, _win: VisibleWindow, window, cx| {
+                                                move |_b, win: VisibleWindow, window, cx| {
                                                     window.paint_quad(gpui::fill(_b, theme.sidebar_bg));
-                                                    // 画全部行，Y 由 GPUI 随 vscroll 自动平移 + content_mask 裁剪。
-                                                    // 不再用 r0..r1 裁剪：之前裁剪范围与数据区 GPUI 平移后可见行不一致，
-                                                    // 会导致部分行号不显示 / 与数据行错位。
-                                                    for r in 0..rows {
-                                                        let y = row_top(r);
+                                                    // Y 坐标减去 win.scroll_y，抵消 GPUI 随 vscroll 的向上平移。
+                                                    // 使首可见行始终从 y≈0 开始，消除顶部空白。
+                                                    // （GPUI 把 canvas 内容整体平移了 offset.y；我们反向偏移让
+                                                    //   可见区域对齐到视口顶部，与点击事件坐标空间一致。）
+                                                    for r in win.r0..win.r1 {
+                                                        let y = row_top(r) - win.scroll_y;
                                                         paint_row_number(
                                                             window,
                                                             cx,
@@ -883,18 +884,22 @@ impl Render for SheetView {
                                         canvas(
                                             {
                                                 let h = self.hscroll.clone();
+                                                let v = self.vscroll.clone();
                                                 move |_b, _w, _cx| {
                                                     let hoff = h.offset();
-                                                    // ⚠️ Y 轴不再用 vscroll.offset() 计算可见范围！
-                                                    // GPUI 的 with_element_offset() 已自动处理纵向滚动偏移：
-                                                    //   - paint 回调内 window.paint_quad 的坐标会被自动平移
-                                                    //   - content_mask 自动裁剪视口外内容
-                                                    // 所以我们只需画出所有行，让 GPUI 处理滚动/裁剪。
-                                                    // X 轴仍需手动处理：#data-scroll 是 overflow_x_hidden，
-                                                    // 横向滚动由 #grid-hscroll 管理，canvas 内部需减去 scroll_x。
+                                                    let voff = v.offset();
+                                                    // X：#data-scroll 是 overflow_x_hidden，横向滚动由 #grid-hscroll 管理，
+                                                        // canvas 内部需手动处理。
+                                                    // Y：GPUI 随 vscroll 将 canvas 向上平移 offset.y，导致首行上方出现空白。
+                                                    //   我们算出可见行范围并从 y≈0 开始绘制（减去 scroll_y 抵消平移），
+                                                    //   使可见区域对齐视口顶部，与点击事件坐标空间一致。
+                                                    let vp_h = v.bounds().size.height.into();
                                                     let scrolled_x: f32 = (-hoff.x).into();
-                                                    compute_visible_cols(
-                                                        scrolled_x, cols,
+                                                    let scrolled_y: f32 = (-voff.y).into();
+                                                    // 用全量 viewport_w（canvas 自身 bounds 是整表尺寸、不能当视口），
+                                                    // X 方向靠 scroll_x 裁剪不可见列。
+                                                    compute_visible_window(
+                                                        f32::MAX, vp_h, scrolled_x, scrolled_y, cols, rows,
                                                     )
                                                 }
                                             },
@@ -907,15 +912,13 @@ impl Render for SheetView {
                                                 let cells = data_cells.clone();
                                                 move |_b, win: VisibleWindow, window: &mut Window, cx: &mut App| {
                                                     window.paint_quad(gpui::fill(_b, theme.content_bg));
-                                                    // Y 轴画全范围（0..rows），GPUI with_element_offset + content_mask
-                                                    // 自动处理滚动偏移和视口裁剪。
-                                                    for r in 0..rows {
+                                                    // 画可见行范围（r0..r1），Y 减去 scroll_y 抵消 GPUI 向上平移，
+                                                    // 使首可见行从 y≈0 开始（消除顶部空白）。
+                                                    // X 减去 scroll_x 抵消横向滚动（与列标头对齐）。
+                                                    for r in win.r0..win.r1 {
                                                         for c in win.c0..win.c1 {
-                                                            // 数据 canvas 只被 GPUI 随 vscroll 平移 Y；
-                                                            // 横向不平移，需手动减去已向左滚动的距离。
                                                             let x = col_left(c) - win.scroll_x;
-                                                            // Y 画 content 坐标，GPUI 随 vscroll 自动平移。
-                                                            let y = row_top(r);
+                                                            let y = row_top(r) - win.scroll_y;
                                                             let cb = Bounds::new(
                                                                 point(px(x), px(y)),
                                                                 size(px(CELL_W), px(CELL_H)),
