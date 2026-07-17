@@ -30,7 +30,7 @@
 
 use gpui::{
     App, Bounds, Context, Entity, FocusHandle, Focusable, FontWeight, KeyDownEvent, MouseButton,
-    MouseDownEvent, Render, ScrollHandle, SharedString, Window, canvas, div, point, px, rgba, size,
+    MouseDownEvent, Render, ScrollHandle, SharedString, TextRun, Window, canvas, div, fill, point, px, rgba, size,
 };
 use gpui::prelude::*;
 use gpui_component::input::{Input, InputEvent, InputState};
@@ -42,7 +42,8 @@ use crate::model::ser::NativeFormat;
 use crate::model::sheet::{Cell, CellValue, Sheet, Workbook};
 use crate::model::Model;
 use crate::sheet_grid::{
-    VisibleWindow, col_left, col_width, compute_visible_window, paint_cell_background,
+    VisibleWindow, col_left, col_width, compute_visible_cols,
+    compute_visible_window, paint_cell_background,
     paint_row_number, row_height, row_top,
 };
 use crate::sheet_grid_cache::GridTextCache;
@@ -55,7 +56,7 @@ const DEF_ROWS: usize = 100;
 // 单元格像素尺寸。
 const CELL_W: f32 = 100.0;
 const CELL_H: f32 = 28.0;
-const HEADER_W: f32 = 44.0;
+const HEADER_W: f32 = 56.0; // 足够容纳 5 位行号（13px 字号下 "99999" ≈ 50px）
 const COL_HEADER_H: f32 = 28.0;
 // 单元格内边距与文字字号（与 `sheet_grid.rs` 保持一致）。
 const CELL_PAD: f32 = 4.0;
@@ -748,10 +749,13 @@ impl Render for SheetView {
                                             {
                                                 let theme = c;
                                                 let selected = selected;
-                                                move |_b, win: VisibleWindow, window, cx| {
+                                                let rows = rows;
+                                                move |_b, _win: VisibleWindow, window, cx| {
                                                     window.paint_quad(gpui::fill(_b, theme.sidebar_bg));
-                                                    for r in win.r0..win.r1 {
-                                                        // Y 由 GPUI 随 vscroll 自动平移，画 content 坐标即可。
+                                                    // 画全部行，Y 由 GPUI 随 vscroll 自动平移 + content_mask 裁剪。
+                                                    // 不再用 r0..r1 裁剪：之前裁剪范围与数据区 GPUI 平移后可见行不一致，
+                                                    // 会导致部分行号不显示 / 与数据行错位。
+                                                    for r in 0..rows {
                                                         let y = row_top(r);
                                                         paint_row_number(
                                                             window,
@@ -782,6 +786,8 @@ impl Render for SheetView {
                                 div()
                                     .id("grid-hscroll")
                                     .h(px(COL_HEADER_H))
+                                    .flex_1()
+                                    .min_w_0()
                                     .flex_shrink_0()
                                     .overflow_x_scroll()
                                     .overflow_y_hidden()
@@ -839,14 +845,16 @@ impl Render for SheetView {
                                         let rows = rows;
                                         move |event: &MouseDownEvent, window: &mut Window,
                                               cx: &mut App| {
-                                            // event.position 相对 data-scroll 视口；
-                                            // 换算回 content 坐标需加上已滚动偏移。
+                                            // ⚠️ GPUI 已通过 with_element_offset() 将事件坐标
+                                            // 转换到内容空间（div.rs:1413），所以 event.position
+                                            // 已经是内容坐标，不能再加 scroll offset（否则双重计数）。
+                                            // h.offset() 仅用于 X 轴——因为数据 canvas 的横向滚动
+                                            // 由 #grid-hscroll 管理，#data-scroll 是 overflow_x_hidden，
+                                            // 但 canvas 内部用 win.scroll_x 手动处理。
                                             let scrolled_x: f32 = f32::from(-h.offset().x);
-                                            let scrolled_y: f32 = f32::from(-v.offset().y);
                                             let content_x: f32 =
                                                 f32::from(event.position.x) + scrolled_x;
-                                            let content_y: f32 =
-                                                f32::from(event.position.y) + scrolled_y;
+                                            let content_y: f32 = f32::from(event.position.y);
                                             let mut c = 0usize;
                                             let mut x = 0.0;
                                             while c + 1 < cols && x + col_width(c) <= content_x {
@@ -875,18 +883,18 @@ impl Render for SheetView {
                                         canvas(
                                             {
                                                 let h = self.hscroll.clone();
-                                                let v = self.vscroll.clone();
                                                 move |_b, _w, _cx| {
-                                                    let vp = v.bounds().size;
-                                                    let voff = v.offset();
                                                     let hoff = h.offset();
-                                                    let viewport_w: f32 = vp.width.into();
-                                                    let viewport_h: f32 = vp.height.into();
+                                                    // ⚠️ Y 轴不再用 vscroll.offset() 计算可见范围！
+                                                    // GPUI 的 with_element_offset() 已自动处理纵向滚动偏移：
+                                                    //   - paint 回调内 window.paint_quad 的坐标会被自动平移
+                                                    //   - content_mask 自动裁剪视口外内容
+                                                    // 所以我们只需画出所有行，让 GPUI 处理滚动/裁剪。
+                                                    // X 轴仍需手动处理：#data-scroll 是 overflow_x_hidden，
+                                                    // 横向滚动由 #grid-hscroll 管理，canvas 内部需减去 scroll_x。
                                                     let scrolled_x: f32 = (-hoff.x).into();
-                                                    let scrolled_y: f32 = (-voff.y).into();
-                                                    compute_visible_window(
-                                                        viewport_w, viewport_h, scrolled_x,
-                                                        scrolled_y, cols, rows,
+                                                    compute_visible_cols(
+                                                        scrolled_x, cols,
                                                     )
                                                 }
                                             },
@@ -897,9 +905,11 @@ impl Render for SheetView {
                                                 let editing = editing;
                                                 let edit_target = self.edit_target;
                                                 let cells = data_cells.clone();
-                                                move |_b, win: VisibleWindow, window, cx| {
+                                                move |_b, win: VisibleWindow, window: &mut Window, cx: &mut App| {
                                                     window.paint_quad(gpui::fill(_b, theme.content_bg));
-                                                    for r in win.r0..win.r1 {
+                                                    // Y 轴画全范围（0..rows），GPUI with_element_offset + content_mask
+                                                    // 自动处理滚动偏移和视口裁剪。
+                                                    for r in 0..rows {
                                                         for c in win.c0..win.c1 {
                                                             // 数据 canvas 只被 GPUI 随 vscroll 平移 Y；
                                                             // 横向不平移，需手动减去已向左滚动的距离。
@@ -928,20 +938,27 @@ impl Render for SheetView {
                                                                     px(x + CELL_PAD),
                                                                     px(y + (CELL_H - CELL_FONT_SIZE) / 2.0),
                                                                 );
-                                                                // 注意：此处必须用 `read`（只读借用）而非 `update` 取文字缓存。
-                                                                // `Entity::update` 会在绘制阶段重入 `App::update`，使随后的
-                                                                // `ShapedLine::paint` 脱离画布的滚动/坐标上下文，把文字画到
-                                                                // 错误的 (x,y)；行号列（`paint_row_number`）不经 `update` 故正常。
-                                                                // `read` 给出 `&GridTextCache`，内部 RefCell 提供可变性；
-                                                                // 真正绘制留在本画布坐标上下文下进行。
-                                                                let shaped = {
-                                                                    let cache_ref = cache.read(cx);
-                                                                    cache_ref.get_or_shape(
-                                                                        r, c, &text, &theme, window, cx,
-                                                                    )
+                                                                let font = window.text_style().font();
+                                                                let run = TextRun {
+                                                                    len: text.len(),
+                                                                    font,
+                                                                    color: theme.text_primary.into(),
+                                                                    background_color: None,
+                                                                    underline: None,
+                                                                    strikethrough: None,
                                                                 };
+                                                                // FIX: force_width=None — GPUI's layout_line
+                                                                // snaps each glyph to glyph_pos*force_width grid,
+                                                                // spreading "format" across 460px (5 columns!).
+                                                                // Only use force_width for tabular/mono content.
+                                                                let shaped = window.text_system().shape_line(
+                                                                    SharedString::from(text.to_string()),
+                                                                    px(crate::sheet_grid::CELL_FONT_SIZE),
+                                                                    &[run],
+                                                                    None,
+                                                                );
                                                                 let _ = shaped.paint(
-                                                                    origin, px(CELL_H), window, cx,
+                                                                    origin, px(crate::sheet_grid::CELL_H), window, cx,
                                                                 );
                                                                 }
                                                             }

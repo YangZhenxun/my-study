@@ -19,7 +19,7 @@ pub const CELL_H: f32 = 28.0;
 pub const CELL_PAD: f32 = 4.0;
 pub const CELL_FONT_SIZE: f32 = 13.0;
 // 左侧行号列宽度（与 `sheet_view.rs` 中的 `HEADER_W` 同值）。
-pub const HEADER_W: f32 = 44.0;
+pub const HEADER_W: f32 = 56.0;
 
 /// 当前可见的 (row, col) 窗口 + 当前滚动偏移。
 #[derive(Clone, Copy, Debug)]
@@ -93,6 +93,34 @@ pub fn compute_visible_window(
         c1: c1.max(c0 + 1),
         r0,
         r1: r1.max(r0 + 1),
+        scroll_x,
+    }
+}
+
+/// 仅计算 X 轴可见列（Y 轴返回全范围 0..total_rows）。
+///
+/// 用于数据 canvas：Y 轴滚动由 GPUI `with_element_offset()` 自动处理，
+/// 我们只需画出所有行，GPUI 负责裁剪/偏移。X 轴仍需手动处理。
+pub fn compute_visible_cols(
+    scroll_x: f32,
+    total_cols: usize,
+) -> VisibleWindow {
+    let mut c0 = 0usize;
+    let mut x = 0.0;
+    while c0 < total_cols && x + col_width(c0) <= scroll_x {
+        x += col_width(c0);
+        c0 += 1;
+    }
+    let mut c1 = c0;
+    // 无 viewport_w 约束时，显示所有剩余列
+    while c1 < total_cols {
+        c1 += 1;
+    }
+    VisibleWindow {
+        c0,
+        c1: c1.max(c0 + 1),
+        r0: 0,   // Y 轴全范围——由 GPUI content_mask 裁剪
+        r1: usize::MAX, // 上限在 paint 循环中由 rows 约束
         scroll_x,
     }
 }
@@ -197,11 +225,13 @@ pub fn paint_row_number(
         underline: None,
         strikethrough: None,
     };
+    // force_width=None — 自然排版；GPUI 的等间距网格重排(line_layout.rs:568)
+    // 会让 "10" 的 '1' 和 '0' 拉开 36px，在窄行号列里虽不明显但原理相同。
     let shaped = window.text_system().shape_line(
         SharedString::from(label),
         px(CELL_FONT_SIZE),
         &[run],
-        Some(px(HEADER_W - 2.0 * CELL_PAD)),
+        None,
     );
     let origin = point(px(CELL_PAD), px(y + (CELL_H - CELL_FONT_SIZE) / 2.0));
     // `ShapedLine::paint` 返回 `Result<()>`，命令式绘制下忽略即可。
