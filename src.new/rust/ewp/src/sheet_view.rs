@@ -43,7 +43,7 @@ use crate::model::sheet::{Cell, CellValue, Sheet, Workbook};
 use crate::model::Model;
 use crate::sheet_grid::{
     VisibleWindow, col_left, col_width, compute_visible_window, paint_cell_background,
-    paint_cell_text, paint_row_number, row_height, row_top,
+    paint_row_number, row_height, row_top,
 };
 use crate::sheet_grid_cache::GridTextCache;
 use crate::styles::ThemeColors;
@@ -924,16 +924,25 @@ impl Render for SheetView {
                                                                     .map(|cell| format_cell(&cell.value))
                                                                     .filter(|s| !s.is_empty())
                                                                 {
-                                                                    let origin = point(
-                                                                        px(x + CELL_PAD),
-                                                                        px(y + (CELL_H - CELL_FONT_SIZE) / 2.0),
-                                                                    );
-                                                                    cache.update(cx, |cache, cx| {
-                                                                        paint_cell_text(
-                                                                            window, cx, cache, origin, r, c,
-                                                                            &text, &theme,
-                                                                        );
-                                                                    });
+                                                                let origin = point(
+                                                                    px(x + CELL_PAD),
+                                                                    px(y + (CELL_H - CELL_FONT_SIZE) / 2.0),
+                                                                );
+                                                                // 注意：此处必须用 `read`（只读借用）而非 `update` 取文字缓存。
+                                                                // `Entity::update` 会在绘制阶段重入 `App::update`，使随后的
+                                                                // `ShapedLine::paint` 脱离画布的滚动/坐标上下文，把文字画到
+                                                                // 错误的 (x,y)；行号列（`paint_row_number`）不经 `update` 故正常。
+                                                                // `read` 给出 `&GridTextCache`，内部 RefCell 提供可变性；
+                                                                // 真正绘制留在本画布坐标上下文下进行。
+                                                                let shaped = {
+                                                                    let cache_ref = cache.read(cx);
+                                                                    cache_ref.get_or_shape(
+                                                                        r, c, &text, &theme, window, cx,
+                                                                    )
+                                                                };
+                                                                let _ = shaped.paint(
+                                                                    origin, px(CELL_H), window, cx,
+                                                                );
                                                                 }
                                                             }
                                                         }

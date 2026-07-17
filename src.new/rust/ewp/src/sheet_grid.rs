@@ -7,11 +7,10 @@
 //! 不持有任何状态（状态在 `sheet_view.rs` 与 `GridTextCache` 中）。
 
 use gpui::{
-    App, Bounds, BorderStyle, Edges, Hsla, Pixels, Point, Rgba, SharedString, TextRun, Window,
+    App, Bounds, BorderStyle, Edges, Hsla, Pixels, Rgba, SharedString, TextRun, Window,
     fill, point, px, quad, size, transparent_black,
 };
 
-use crate::sheet_grid_cache::GridTextCache;
 use crate::styles::ThemeColors;
 
 // 单元格像素尺寸与内边距（与 `sheet_view.rs` 中保持一致）。
@@ -144,27 +143,6 @@ pub fn paint_cell_background(
     }
 }
 
-/// 绘制单元格文字（经 `GridTextCache` 缓存 `ShapedLine`，避免每帧重新 shape）。
-///
-/// 调用方需先把 `self.text_cache` 经 `Entity::update` 取出 `&mut GridTextCache` 后传入。
-pub fn paint_cell_text(
-    window: &mut Window,
-    cx: &mut App,
-    cache: &mut GridTextCache,
-    origin: Point<Pixels>,
-    row: usize,
-    col: usize,
-    text: &str,
-    c: &ThemeColors,
-) {
-    if text.is_empty() {
-        return;
-    }
-    let shaped = cache.get_or_shape(row, col, text, c, window, cx);
-    // `ShapedLine::paint` 返回 `Result<()>`，命令式绘制下忽略即可。
-    let _ = shaped.paint(origin, px(CELL_H), window, cx);
-}
-
 /// 绘制左侧行号列的一个行号。
 ///
 /// 底色 `sidebar_bg`（选中 `accent` 低透明），数字由 `shape_line` 后 `paint`。
@@ -228,4 +206,83 @@ pub fn paint_row_number(
     let origin = point(px(CELL_PAD), px(y + (CELL_H - CELL_FONT_SIZE) / 2.0));
     // `ShapedLine::paint` 返回 `Result<()>`，命令式绘制下忽略即可。
     let _ = shaped.paint(origin, px(CELL_H), window, cx);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── 坐标常量 ──
+
+    #[test]
+    fn col_left_constants() {
+        assert_eq!(col_left(0), 0.0);
+        assert_eq!(col_left(1), 100.0);
+        assert_eq!(col_left(2), 200.0);
+    }
+
+    #[test]
+    fn row_top_constants() {
+        assert_eq!(row_top(0), 0.0);
+        assert_eq!(row_top(1), 28.0);
+        assert_eq!(row_top(2), 56.0);
+    }
+
+    // ── compute_visible_window：原点（无滚动） ──
+
+    #[test]
+    fn visible_window_at_origin() {
+        let w = compute_visible_window(1000.0, 560.0, 0.0, 0.0, 26, 100);
+        assert_eq!(w.c0, 0);
+        assert_eq!(w.c1, 10, "1000/100 -> 10 列可见");
+        assert_eq!(w.r0, 0);
+        assert_eq!(w.r1, 20, "560/28 -> 20 行可见");
+        assert_eq!(w.scroll_x, 0.0);
+    }
+
+    // ── compute_visible_window：横向滚动 250 ──
+    // 注意：任务描述写 c1==14，但按算法正确值是 13。
+    // 视口 content 区间 [250, 1250]；列宽恒 100：
+    //   col2 left=200、col12 left=1200 部分可见，col13 left=1300 已超出 1250 不可见。
+    // 故可见列为 2..12（含），c1 上界（开）应为 13。
+    #[test]
+    fn visible_window_horizontal_scroll() {
+        let w = compute_visible_window(1000.0, 560.0, 250.0, 0.0, 26, 100);
+        assert_eq!(w.c0, 2, "前两列 0..100、100..200 完全滚过");
+        assert_eq!(w.c1, 13, "最后可见列为 col12(left=1200)，c1 上界=13");
+        assert_eq!(w.r0, 0);
+        assert_eq!(w.r1, 20);
+        // 首列可见左边缘部分超出视口左沿 -> -50.0，正确
+        assert_eq!(col_left(2) - w.scroll_x, -50.0);
+        assert_eq!(w.scroll_x, 250.0);
+    }
+
+    // ── compute_visible_window：纵向滚动 280 ──
+    #[test]
+    fn visible_window_vertical_scroll() {
+        let w = compute_visible_window(1000.0, 560.0, 0.0, 280.0, 26, 100);
+        assert_eq!(w.r0, 10, "前 10 行(10*28=280)完全滚过");
+        assert_eq!(w.r1, 30, "视口 [280,840]，row29 top=812 可见、row30 top=840 不可见");
+        assert_eq!(w.scroll_x, 0.0);
+    }
+
+    // ── 边界：超大滚动不 panic，且 c1/r1 至少保证 1 列/行 ──
+    #[test]
+    fn visible_window_huge_scroll_no_panic() {
+        let w = compute_visible_window(1000.0, 560.0, 1_000_000.0, 1_000_000.0, 26, 100);
+        assert_eq!(w.c0, 26);
+        assert_eq!(w.r0, 100);
+        assert!(w.c1 >= w.c0 + 1, "至少 1 列");
+        assert!(w.r1 >= w.r0 + 1, "至少 1 行");
+    }
+
+    // ── 边界：空表（total 为 0）不 panic，c1/r1.max(c0+1) 兜底 ──
+    #[test]
+    fn visible_window_empty_sheet() {
+        let w = compute_visible_window(1000.0, 560.0, 0.0, 0.0, 0, 0);
+        assert_eq!(w.c0, 0);
+        assert_eq!(w.r0, 0);
+        assert!(w.c1 >= w.c0 + 1);
+        assert!(w.r1 >= w.r0 + 1);
+    }
 }

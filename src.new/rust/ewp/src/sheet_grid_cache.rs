@@ -9,6 +9,7 @@
 
 use gpui::ShapedLine;
 use gpui::{App, Rgba, SharedString, TextRun, Window, px};
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::sheet_grid::{CELL_FONT_SIZE, CELL_PAD, CELL_W};
@@ -25,14 +26,18 @@ struct CellCacheKey {
 }
 
 /// 单元格文字的 `ShapedLine` 缓存（存于独立 `Entity`，paint 闭包内安全访问，无重入风险）。
+///
+/// 内部用 `RefCell` 提供内部可变性：在 paint 闭包内可通过 `Entity::read`（只读借用，
+/// 不会像 `Entity::update` 那样在绘制阶段重入 `App::update` 而脱离画布的滚动/坐标上下文）
+/// 取到 `&GridTextCache`，再由 `get_or_shape` 临时借用可变来增删缓存。
 pub struct GridTextCache {
-    map: HashMap<CellCacheKey, ShapedLine>,
+    map: RefCell<HashMap<CellCacheKey, ShapedLine>>,
 }
 
 impl Default for GridTextCache {
     fn default() -> Self {
         Self {
-            map: HashMap::new(),
+            map: RefCell::new(HashMap::new()),
         }
     }
 }
@@ -40,14 +45,17 @@ impl Default for GridTextCache {
 impl GridTextCache {
     /// 取（或按需 shape）某单元格的 `ShapedLine`。
     /// `row` / `col` 仅用于区分缓存键；`theme` 用于文字颜色与主题失效。
+    ///
+    /// 接受 `&self`：通过内部 `RefCell` 临时可变借用完成增删，从而可在 paint 闭包内
+    /// 经 `Entity::read` 以只读方式安全调用，避免重入 `Entity::update` 破坏绘制坐标上下文。
     pub fn get_or_shape(
-        &mut self,
+        &self,
         row: usize,
         col: usize,
         text: &str,
         theme: &ThemeColors,
         window: &mut Window,
-        _cx: &mut App,
+        _cx: &App,
     ) -> ShapedLine {
         let theme_hash = pack_theme(theme);
         let key = CellCacheKey {
@@ -56,7 +64,7 @@ impl GridTextCache {
             value: text.to_string(),
             theme_hash,
         };
-        if let Some(shaped) = self.map.get(&key).cloned() {
+        if let Some(shaped) = self.map.borrow().get(&key).cloned() {
             return shaped;
         }
 
@@ -76,13 +84,13 @@ impl GridTextCache {
             &[run],
             Some(px(CELL_W - 2.0 * CELL_PAD)),
         );
-        self.map.insert(key, shaped.clone());
+        self.map.borrow_mut().insert(key, shaped.clone());
         shaped
     }
 
     /// 整表粗失效（写入 / 清空单元格后调用）。
-    pub fn invalidate_for_sheet(&mut self) {
-        self.map.clear();
+    pub fn invalidate_for_sheet(&self) {
+        self.map.borrow_mut().clear();
     }
 }
 
