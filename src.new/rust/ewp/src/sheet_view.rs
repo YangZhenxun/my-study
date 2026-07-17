@@ -871,14 +871,15 @@ impl Render for SheetView {
                                     .id("data-scroll")
                                     .flex_1()
                                     .min_h_0()
-                                    // ── Fix A（核心修复）──
-                                    // 原代码对 #data-scroll 同时 `overflow_y_scroll()` + `track_scroll(&self.vscroll)`，
-                                    // 与左侧 #row-canvas 共用同一个 self.vscroll。GPUI 0.2.2 的 ScrollHandleState 是
-                                    // 单值结构（bounds / max_offset / overflow 均为 last-writer-wins，且 scroll_offset
-                                    // 通过 Rc 被两个容器共享_mut），两个容器 track 同一 handle 会让后布局的容器接管滚动
-                                    // 状态，导致数据区 canvas 被错误平移/裁剪而完全空白（行号列因先布局反而正常）。
-                                    // 改为：#data-scroll 不再是滚动容器，纵向滚动完全由 #row-canvas 的 vscroll 统一驱动；
-                                    // 本 canvas 在 paint 闭包里手动按 vscroll.offset().y 偏移绘制（见下方 paint / click）。
+                                    // 🔴 Fix C（根因候选）：必须加回 overflow_y_scroll()！
+                                    // 上一版去掉它后，#data-scroll 变成普通 div（仅靠默认 content_mask 裁剪），
+                                    // 内部 2800px 高的 canvas 子元素在非滚动容器内的裁剪行为不可预测：
+                                    //   - 行号列裁掉 ~84px（3行），数据区裁掉 ~336px（12行）
+                                    //   - 两者裁剪量不同说明不是统一偏移问题，而是各自的布局/裁剪原点错位。
+                                    // 加回 overflow_y_scroll 后 GPUI 为本容器建立正规的滚动裁剪上下文，
+                                    // 即使不 track 任何 ScrollHandle（offset 恒为 0,0），canvas 的 paint 坐标系也与
+                                    // 裁剪区域正确对齐。横向仍 hidden（由 #grid-hscroll 管理）。
+                                    .overflow_y_scroll()
                                     .overflow_x_hidden()
                                     .on_mouse_down(MouseButton::Left, {
                                         let this = this.clone();
@@ -970,6 +971,23 @@ impl Render for SheetView {
                                                         }
                                                     });
                                                     window.paint_quad(gpui::fill(_b, theme.content_bg));
+                                                    // [DIAG] 数据区首帧打印前 5 行的绘制坐标和 canvas bounds
+                                                    if win.r0 == 0 {
+                                                        eprintln!(
+                                                            "[EWP][diag] data-canvas PAINT: _b={:?} x range=[{},{}], scroll_y={}",
+                                                            _b.size,
+                                                            col_left(win.c0) - win.scroll_x,
+                                                            col_left((win.c1 - 1).min(cols - 1)) - win.scroll_x,
+                                                            win.scroll_y,
+                                                        );
+                                                        for diag_r in win.r0..(win.r0 + 5.min(win.r1 - win.r0)) {
+                                                            let diag_y = row_top(diag_r) - win.scroll_y;
+                                                            eprintln!(
+                                                                "  row {} -> y={:.1} (row_top={:.1} - scroll_y={:.1})",
+                                                                diag_r, diag_y, row_top(diag_r), win.scroll_y,
+                                                            );
+                                                        }
+                                                    }
                                                     // X: col_left(c) - win.scroll_x 抵消数据区不参与横向滚动
                                                     //   （横向由 #grid-hscroll 的 hscroll 管理）导致的手动横向偏移。
                                                     // Y: #data-scroll 已不再 track vscroll，GPUI 不会自动平移本 canvas，
