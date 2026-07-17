@@ -32,11 +32,8 @@ pub struct VisibleWindow {
     /// 纵向滚动由 GPUI 随 `vscroll` 自动平移 canvas 子元素，无需在此记录。
     pub scroll_x: f32,
     /// 已向下滚动的纵向距离（正数）。
-    /// 注意：paint 闭包当前不再使用 scroll_y——canvas 是 `track_scroll(vscroll)` 子元素，
-    /// GPUI 已自动按 `vscroll.offset()` 平移内容，手动减去会双重计数。字段保留以维持
-    /// `VisibleWindow` 结构稳定（`compute_visible_window` 仍会写入此字段），用
-    /// `#[allow(dead_code)]` 抑制未读取警告。
-    #[allow(dead_code)]
+    /// 数据区 canvas（#data-scroll 已不再 track_scroll）在 paint 闭包里用
+    /// `row_top(r) - scroll_y` 手动把可见行落到视口内，故此字段被实际读取。
     pub scroll_y: f32,
 }
 

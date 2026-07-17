@@ -153,8 +153,17 @@ pub struct SheetView {
 
     /// 横向滚动手柄：列标头（#grid-hscroll）使用；数据区横向滚动时手动读取其偏移绘制。
     hscroll: ScrollHandle,
-    /// 纵向滚动手柄：数据区与行号列共享，实现冻结窗格的纵向同步滚动。
+    /// 纵向滚动手柄：原用于数据区与行号列「共享」实现冻结窗格纵向同步滚动。
+    /// 现仅由 #row-canvas 追踪（见下方 #data-scroll 修复说明）——两个容器 track 同一
+    /// ScrollHandle 在 GPUI 0.2.2 下会让滚动状态冲突，导致数据区完全空白。
     vscroll: ScrollHandle,
+    /// 首帧是否已对 vscroll 初始偏移做过一次性归零（Fix B 兜底，避免每帧重置而影响用户滚动）。
+    vscroll_zeroed: bool,
+    /// 上次绘制数据 canvas 时读到的纵向滚动偏移（像素，为正 = 已向下滚）。
+    /// #data-scroll 已不再 track_scroll(vscroll)（避免与 #row-canvas 共享 handle 冲突），
+    /// 因此 GPUI 不会在滚动时自动重绘数据 canvas。此处记录上次偏移，paint 内若发现偏移变化
+    /// 就通知整个 SheetView 重绘，实现「行号列滚动 → 数据区同步」的视觉同步。带去重，不会死循环。
+    last_paint_scroll_y: f32,
     /// 单元格文字 `ShapedLine` 缓存（独立 Entity，paint 闭包内安全访问，避免每帧重新 shape）。
     text_cache: Entity<GridTextCache>,
 
@@ -229,6 +238,8 @@ impl SheetView {
             edit_input,
             hscroll: ScrollHandle::new(),
             vscroll: ScrollHandle::new(),
+            vscroll_zeroed: false,
+            last_paint_scroll_y: 0.0,
             text_cache: cx.new(|_cx| GridTextCache::default()),
             focus: cx.focus_handle(),
         };
@@ -500,6 +511,21 @@ impl Focusable for SheetView {
 impl Render for SheetView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let this = cx.entity();
+
+        // ── Fix B（临时验证）：一次性将首帧可能的非零 vscroll 初始偏移归零 ──
+        // 两个滚动容器曾共享 self.vscroll（见下方 #data-scroll 修复说明），GPUI 0.2.2 下
+        // 共享 ScrollHandle 会让滚动状态冲突，可能使 vscroll 在首帧产生非零偏移，表现为
+        // 顶部约 3 行空白、行号从 4 开始。此处兜底：仅首帧检查，若偏移非零则归零并打印日志
+        // （生产方案应根治偏移来源）。用一次性标志避免每帧重置而影响用户滚动。
+        if !self.vscroll_zeroed {
+            self.vscroll_zeroed = true;
+            let off = self.vscroll.offset();
+            if off.x != px(0.) || off.y != px(0.) {
+                eprintln!("[EWP][sheet] vscroll 初始偏移非零，已归零: {:?}", off);
+                self.vscroll.set_offset(point(px(0.), px(0.)));
+            }
+        }
+
         let c = ThemeColors::current();
         let book = self.workbook();
         let sheet = self.current_sheet();
@@ -694,10 +720,12 @@ impl Render for SheetView {
             //   ├─────────┼──────────────────────────┤
             //   │行号(纵滚)│ 数据区（双轴滚，滚动渲染） │
             //   └─────────┴──────────────────────────┘
-            // 3 个滚动容器共享 2 个 ScrollHandle：
-            //   row-scroll   → 仅 track vscroll（行号纵向同步）
-            //   col-scroll   → 仅 track hscroll（列标头横向滚动，DOM 字母）
-            //   data-scroll  → 仅 track vscroll（数据区纵向同步；横向 GPUI 不平移，手动读 hscroll 偏移）
+            // 滚动容器与 ScrollHandle 关系（Fix A 后）：
+            //   row-canvas   → 仅 track vscroll（行号纵向滚动，同时作为数据区纵向滚动的唯一驱动源）
+            //   grid-hscroll → 仅 track hscroll（列标头横向滚动，DOM 字母）
+            //   data-scroll  → 不再是滚动容器（不再 overflow_y_scroll / track_scroll）。
+            //                  纵向可见范围直接复用 vscroll.offset()（由 #row-canvas 维护），
+            //                  在 paint 里手动按 offset 偏移绘制，横向手动读 hscroll 偏移。
             .child(
                 div()
                     .id("sheet-body")
@@ -838,29 +866,34 @@ impl Render for SheetView {
                                     .id("data-scroll")
                                     .flex_1()
                                     .min_h_0()
-                                    .overflow_y_scroll()
+                                    // ── Fix A（核心修复）──
+                                    // 原代码对 #data-scroll 同时 `overflow_y_scroll()` + `track_scroll(&self.vscroll)`，
+                                    // 与左侧 #row-canvas 共用同一个 self.vscroll。GPUI 0.2.2 的 ScrollHandleState 是
+                                    // 单值结构（bounds / max_offset / overflow 均为 last-writer-wins，且 scroll_offset
+                                    // 通过 Rc 被两个容器共享_mut），两个容器 track 同一 handle 会让后布局的容器接管滚动
+                                    // 状态，导致数据区 canvas 被错误平移/裁剪而完全空白（行号列因先布局反而正常）。
+                                    // 改为：#data-scroll 不再是滚动容器，纵向滚动完全由 #row-canvas 的 vscroll 统一驱动；
+                                    // 本 canvas 在 paint 闭包里手动按 vscroll.offset().y 偏移绘制（见下方 paint / click）。
                                     .overflow_x_hidden()
-                                    .track_scroll(&self.vscroll)
                                     .on_mouse_down(MouseButton::Left, {
                                         let this = this.clone();
                                         let h = self.hscroll.clone();
-                                        // vscroll 不在此闭包内使用：#data-scroll 只 track vscroll，
-                                        // Y 事件坐标已由 GPUI 转成 content 坐标，无需手动读 vscroll。
-                                        let _v = self.vscroll.clone();
+                                        // #data-scroll 已不再 track vscroll（见上方修复说明），GPUI 不会再
+                                        // 把鼠标事件坐标 via with_element_offset 转换到内容空间，因此 Y 必须手动
+                                        // 加回纵向滚动偏移 scrolled_y = -vscroll.offset().y（X 轴同理，横向由
+                                        // #grid-hscroll 的 hscroll 管理）。若不加则命中行会比实际偏低 → 点击错位。
+                                        let v = self.vscroll.clone();
                                         let cols = cols;
                                         let rows = rows;
                                         move |event: &MouseDownEvent, window: &mut Window,
                                               cx: &mut App| {
-                                            // ⚠️ GPUI 已通过 with_element_offset() 将事件坐标
-                                            // 转换到内容空间（div.rs:1413），所以 event.position
-                                            // 已经是内容坐标，不能再加 scroll offset（否则双重计数）。
-                                            // h.offset() 仅用于 X 轴——因为数据 canvas 的横向滚动
-                                            // 由 #grid-hscroll 管理，#data-scroll 是 overflow_x_hidden，
-                                            // 但 canvas 内部用 win.scroll_x 手动处理。
                                             let scrolled_x: f32 = f32::from(-h.offset().x);
+                                            let scrolled_y: f32 = f32::from(-v.offset().y);
                                             let content_x: f32 =
                                                 f32::from(event.position.x) + scrolled_x;
-                                            let content_y: f32 = f32::from(event.position.y);
+                                            // 事件坐标是视口坐标，加 scrolled_y 还原成内容坐标。
+                                            let content_y: f32 =
+                                                f32::from(event.position.y) + scrolled_y;
                                             let mut c = 0usize;
                                             let mut x = 0.0;
                                             while c + 1 < cols && x + col_width(c) <= content_x {
@@ -894,11 +927,10 @@ impl Render for SheetView {
                                                     let hoff = h.offset();
                                                     let voff = v.offset();
                                                     // X：#data-scroll 是 overflow_x_hidden，横向滚动由 #grid-hscroll 管理，
-                                                        // canvas 内部需手动处理。
-                                                    // Y：#data-scroll 是 track_scroll(vscroll) 子元素，GPUI 已随 vscroll
-                                                    //   把 canvas 内容整体平移 offset.y；paint 直接画真实 content 坐标
-                                                    //   row_top(r) 即可。scrolled_y 仅用于算出可见行范围 r0..r1
-                                                    //   （compute_visible_window 据此裁剪），不再在 paint 里减去。
+                                                        // canvas 内部需手动处理（paint 里 col_left(c) - win.scroll_x）。
+                                                    // Y：#data-scroll 已不再 track vscroll，不再有 GPUI 自动平移；
+                                                    //   scrolled_y = -voff.y 仅用于 compute_visible_window 算出可见行
+                                                    //   范围 r0..r1，真正的像素偏移在 paint 里用 row_top(r) - win.scroll_y 手动做。
                                                     let vp_h = v.bounds().size.height.into();
                                                     let scrolled_x: f32 = (-hoff.x).into();
                                                     let scrolled_y: f32 = (-voff.y).into();
@@ -918,18 +950,32 @@ impl Render for SheetView {
                                                 let editing = editing;
                                                 let edit_target = self.edit_target;
                                                 let cells = data_cells.clone();
+                                                // 滚动同步所需：vscroll 当前偏移 + 自身 Entity（用于 notify 整视图重绘）。
+                                                let v = self.vscroll.clone();
+                                                let this = this.clone();
                                                 move |_b, win: VisibleWindow, window: &mut Window, cx: &mut App| {
+                                                    // ── 滚动同步（Fix A 配套）──
+                                                    // #data-scroll 已不再 track_scroll(vscroll)，GPUI 不会在滚动时自动重绘本 canvas。
+                                                    // 检测纵向偏移是否相对上次绘制发生变化：变化则更新记录并 notify 整视图重绘，
+                                                    // 使数据区随行号列一起滚动。带 0.01px 去重阈值，且重绘后偏移已同步，不会死循环。
+                                                    let off_y: f32 = f32::from(v.offset().y);
+                                                    this.update(cx, |view, cx2| {
+                                                        if (off_y - view.last_paint_scroll_y).abs() > 0.01 {
+                                                            view.last_paint_scroll_y = off_y;
+                                                            cx2.notify();
+                                                        }
+                                                    });
                                                     window.paint_quad(gpui::fill(_b, theme.content_bg));
-                                                    // X: col_left(c) - win.scroll_x 抵消 #data-scroll 不 track hscroll
-                                                    // 导致的手动横向偏移（与列标头 flex_row 经 hscroll 平移后的位置一致）。
-                                                    // Y: 用真实 content 坐标 row_top(r)。#data-scroll 是 track_scroll(vscroll)
-                                                    // 的子元素，GPUI 已把整块内容按 vscroll.offset() 平移，paint 不再手动
-                                                    // 减 scroll_y（否则双重计数 → 顶部空白 + 点击错位）。r0..r1 裁剪由
-                                                    // compute_visible_window 算出。
+                                                    // X: col_left(c) - win.scroll_x 抵消数据区不参与横向滚动
+                                                    //   （横向由 #grid-hscroll 的 hscroll 管理）导致的手动横向偏移。
+                                                    // Y: #data-scroll 已不再 track vscroll，GPUI 不会自动平移本 canvas，
+                                                    //   故需手动减 win.scroll_y（= -vscroll.offset().y，已向下滚动的正距离）
+                                                    //   把可见行落到视口内；若不减则可见行被推到视口上方 → 顶部空白 + 点击错位。
+                                                    //   r0..r1 由 compute_visible_window 按 scrolled_y 算出。
                                                     for r in win.r0..win.r1 {
                                                         for c in win.c0..win.c1 {
                                                             let x = col_left(c) - win.scroll_x;
-                                                            let y = row_top(r);
+                                                            let y = row_top(r) - win.scroll_y;
                                                             let cb = Bounds::new(
                                                                 point(px(x), px(y)),
                                                                 size(px(CELL_W), px(CELL_H)),
