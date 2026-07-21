@@ -135,6 +135,21 @@ pub fn app_menus() -> Vec<Menu> {
                     t!("menu.view.toggle_fullscreen").to_string(),
                     ewp_actions::ToggleFullScreen,
                 ),
+                // 界面模式子菜单（标准工具栏 / 标签页式）—— 决策②：仅菜单，不设设置页。
+                MenuItem::separator(),
+                MenuItem::submenu(Menu {
+                    name: t!("ui.interface_mode").to_string().into(),
+                    items: vec![
+                        MenuItem::action(
+                            t!("ui.mode_standard").to_string(),
+                            ewp_actions::SetUiMode("standard".to_string()),
+                        ),
+                        MenuItem::action(
+                            t!("ui.mode_tabbed").to_string(),
+                            ewp_actions::SetUiMode("tabbed".to_string()),
+                        ),
+                    ],
+                }),
             ],
         },
         // ═══ Window ═══

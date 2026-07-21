@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant Main as main.rs (启动)
+    participant Mgr as UiLayoutManager (GPUI global)
+    participant Persist as ui::persistence (ui_mode.json)
+    participant View as EditorView/SheetView/SlideView
+    participant Layout as 当前 UiLayout (Standard/Tabbed)
+
+    Note over Main,Persist: 启动期：装载持久化模式
+    Main->>Mgr: cx.set_global(UiLayoutManager::new_with_defaults())
+    Main->>Persist: load_ui_mode()
+    Persist-->>Main: UiModeSettings { default }
+    Main->>Mgr: set_mode(default)  // 无效 id 回退 "standard"
+    Main->>Main: open_editor() 打开各文档窗口
+
+    Note over View,Layout: 渲染期：每帧构建 chrome
+    View->>View: render_body() -> body: AnyElement
+    View->>View: 构造 ChromeCtx { name, dirty, tool_group, callbacks }
+    View->>Mgr: render_chrome(ctx, body, window, cx)
+    Mgr->>Mgr: current_layout() = registry[current]
+    Mgr->>Layout: render_top(&ctx, body, window, cx)
+    Layout-->>View: AnyElement (顶栏 + body)
+    View-->>User: 显示窗口
+
+    Note over User,Mgr: 运行时：切换模式
+    User->>Main: 菜单「视图 > 界面模式 > 标签页式」
+    Main->>Mgr: set_mode("tabbed")
+    Mgr->>Persist: save_ui_mode(UiModeSettings{ default:"tabbed" })
+    Mgr->>Mgr: 通知所有窗口 cx.notify() 触发重绘
+    Note over View,Layout: 下一帧各窗口 render 改走 TabbedLayout

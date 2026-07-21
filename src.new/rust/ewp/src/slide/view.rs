@@ -2,7 +2,7 @@
 //!
 //! 布局（从外到内）：
 //! ┌──────────────────────────────────────────────────────────┐
-//! │  工具栏：文件名 · ＋幻灯片 · ＋文本框 · 保存                │
+//! │  [框架顶部栏：文件名 · ＋幻灯片 · ＋文本框 · 保存]           │  ← UiLayoutManager 统一套 chrome
 //! ├──────────────┬───────────────────────────────────────────┤
 //! │  缩略图导航   │  主画布（16:9 白纸，绝对定位渲染各 shape）   │
 //! │  [1]         │  ┌─────────────────────────────────────┐   │
@@ -12,25 +12,33 @@
 //! │  状态栏：幻灯片 X / N                                       │
 //! └──────────────────────────────────────────────────────────┘
 //!
-//! 模型层（`model::slide`）已定义：
+//! 模型层（`slide::model`）已定义：
 //!   Presentation { slides: Vec<Slide> }
 //!   Slide       { shapes: Vec<Shape>, background: Option<Rgb> }
 //!   Shape       { geom: Rect, kind: ShapeKind, style: TextStyle }
 //!   ShapeKind   { Text(Vec<Run>) | Image(String) | Vector(String) }
 //! 这里只负责渲染与轻量交互（选择、新增幻灯片/文本框），不做富文本编辑。
+//!
+//! 顶部 chrome 由 `UiLayoutManager` 调度：标准模式 = `StandardToolbar`，
+//! 标签页式 = `TabbedLayout`。**本文件内部的画布渲染绝不动**。
 
+// mirrors LibreOffice: 本视图对应 `sdui::SlideView` 的画布区；顶部 chrome 由
+// `sfx2::SfxNotebookBar` 调度的 toolbar 提供（见 `ui/layout.rs` / `ui/standard.rs`）。
 use gpui::{
-    App, ClickEvent, Context, FocusHandle, Focusable, FontWeight, Render, SharedString, Window,
-    div, px, rgba,
+    App, ClickEvent, Context, FocusHandle, Focusable, Render, SharedString,
+    Window, div, px, rgba,
 };
 use gpui::prelude::*;
+use std::rc::Rc;
 
 use crate::data;
 use crate::model::ser::NativeFormat;
-use crate::model::slide::{Presentation, Shape, ShapeKind, Slide};
-use crate::model::text::Run;
 use crate::model::Model;
+use crate::slide::model::{Presentation, Rect, Shape, ShapeKind, Slide};
 use crate::styles::ThemeColors;
+use crate::text::model::Run;
+use crate::ui::layout::{ChromeCtx, ModelKind};
+use crate::ui::manager::UiLayoutManager;
 use std::path::PathBuf;
 
 // 幻灯片逻辑尺寸（设计单位，shape.geom 以此为坐标系）。16:9。
@@ -66,7 +74,7 @@ impl SlideView {
         Model::Slide(Presentation {
             slides: vec![Slide {
                 shapes: vec![Shape {
-                    geom: crate::model::slide::Rect {
+                    geom: Rect {
                         x: 80.0,
                         y: 200.0,
                         w: 800.0,
@@ -151,7 +159,7 @@ impl SlideView {
     fn add_slide(&mut self, cx: &mut Context<Self>) {
         let blank = Slide {
             shapes: vec![Shape {
-                geom: crate::model::slide::Rect {
+                geom: Rect {
                     x: 80.0,
                     y: 200.0,
                     w: 800.0,
@@ -182,7 +190,7 @@ impl SlideView {
             };
             let n = slide.shapes.len();
             slide.shapes.push(Shape {
-                geom: crate::model::slide::Rect {
+                geom: Rect {
                     x: 120.0,
                     y: 120.0 + n as f32 * 70.0,
                     w: 600.0,
@@ -235,98 +243,81 @@ impl Focusable for SlideView {
 }
 
 impl Render for SlideView {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let this = cx.entity();
         let c = ThemeColors::current();
         let pres = self.presentation();
         let total = pres.slides.len();
         let current = self.current.min(total.saturating_sub(1));
 
-        let title = if self.dirty {
-            format!("{} *", self.name)
-        } else {
-            self.name.to_string()
+        // 顶部 chrome 回调（保存 / 侧栏[演示无] / 格式[演示无] / 文档类型切换）。
+        let on_save: Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static> = {
+            let this = this.clone();
+            Rc::new(move |_: &ClickEvent, _: &mut Window, cx: &mut App| {
+                let this = this.clone();
+                let _ = this.update(cx, |v, cx| v.save_document(cx));
+            })
+        };
+        // 演示 / 表格无侧栏：no-op（决策⑥）。
+        let on_toggle_sidebar: Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static> =
+            Rc::new(|_: &ClickEvent, _: &mut Window, _: &mut App| {});
+        let on_format: Rc<dyn Fn(&str, &ClickEvent, &mut Window, &mut App) + 'static> =
+            Rc::new(|_: &str, _: &ClickEvent, _: &mut Window, _: &mut App| {});
+        // 文档类型切换（Tabbed 的 tab 点击触发）：打开对应类型的新窗口（决策⑤）。
+        let on_switch_model: Rc<dyn Fn(ModelKind, &mut Window, &mut App) + 'static> = {
+            Rc::new(move |kind: ModelKind, _window: &mut Window, cx: &mut App| {
+                // mirrors LibreOffice: 切到另一 module（Writer/Calc/Impress）即开对应文档窗口。
+                let model = match kind {
+                    ModelKind::Text => Model::Text(crate::text::model::Document::default()),
+                    ModelKind::Sheet => Model::Sheet(crate::sheet::model::Workbook::default()),
+                    ModelKind::Slide => Model::Slide(crate::slide::model::Presentation::default()),
+                };
+                crate::open_editor(cx, "Untitled".into(), Some(model), None);
+            })
         };
 
-        div()
+        // 中间工具按钮组（＋幻灯片 / ＋文本框），交给 StandardToolbar 嵌进统一框。
+        let tool_group = {
+            let c = ThemeColors::current();
+            let this = this.clone();
+            div()
+                .flex()
+                .flex_row()
+                .items_center()
+                .gap_2()
+                .child(tool_btn(
+                    "slide-add",
+                    "＋ 幻灯片",
+                    &c,
+                    {
+                        let t = this.clone();
+                        move |_, _, cx: &mut App| {
+                            let _ = t.update(cx, |v, cx| v.add_slide(cx));
+                        }
+                    },
+                ))
+                .child(tool_btn(
+                    "slide-add-text",
+                    "＋ 文本框",
+                    &c,
+                    {
+                        let t = this.clone();
+                        move |_, _, cx: &mut App| {
+                            let _ = t.update(cx, |v, cx| v.add_text_shape(cx));
+                        }
+                    },
+                ))
+                .into_any_element()
+        };
+
+        // ── 文档内容 body（不含顶部栏，由框架套 chrome 后放在下方）──
+        let body = div()
             .id("slide-root")
-            .size_full()
+            .flex_1()
+            .min_h_0()
             .flex()
             .flex_col()
             .bg(c.window_bg)
-            // ═══ 顶栏 ═══
-            .child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .items_center()
-                    .justify_between()
-                    .px(px(16.))
-                    .py(px(6.))
-                    .bg(c.sidebar_bg)
-                    .border_b_1()
-                    .border_color(c.border)
-                    .child(
-                        div()
-                            .text_sm()
-                            .font_weight(FontWeight::MEDIUM)
-                            .text_color(c.text_muted)
-                            .child(SharedString::from(title)),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .items_center()
-                            .gap_2()
-                            .child(tool_btn(
-                                "slide-add",
-                                "＋ 幻灯片",
-                                &c,
-                                {
-                                    let t = this.clone();
-                                    move |_, _, cx: &mut App| {
-                                        let _ = t.update(cx, |v, cx| v.add_slide(cx));
-                                    }
-                                },
-                            ))
-                            .child(tool_btn(
-                                "slide-add-text",
-                                "＋ 文本框",
-                                &c,
-                                {
-                                    let t = this.clone();
-                                    move |_, _, cx: &mut App| {
-                                        let _ = t.update(cx, |v, cx| v.add_text_shape(cx));
-                                    }
-                                },
-                            ))
-                            .child(
-                                div()
-                                    .id("slide-save")
-                                    .flex()
-                                    .items_center()
-                                    .px_3()
-                                    .py_1()
-                                    .rounded_md()
-                                    .bg(if self.dirty { c.accent } else { c.button_bg })
-                                    .text_color(if self.dirty {
-                                        rgba(0xffffffff)
-                                    } else {
-                                        c.text_primary
-                                    })
-                                    .cursor_pointer()
-                                    .hover(|s| s.opacity(0.85))
-                                    .child(SharedString::from("保存"))
-                                    .on_click({
-                                        let t = this.clone();
-                                        move |_, _, cx: &mut App| {
-                                            let _ = t.update(cx, |v, cx| v.save_document(cx));
-                                        }
-                                    }),
-                            ),
-                    ),
-            )
             // ═══ 主体：左缩略图 + 右画布 ═══
             .child(
                 div()
@@ -402,42 +393,42 @@ impl Render for SlideView {
                             .justify_center()
                             .bg(c.border)
                             .child(
-                                        div()
-                                            .relative()
-                                            .w(px(CANVAS_W))
-                                            .h(px(CANVAS_H))
-                                            .rounded_md()
-                                            .bg(c.content_bg)
-                                            .shadow_md()
-                                            .children(
-                                                pres
-                                                    .slides
-                                                    .get(current)
-                                                    .map(|slide| {
-                                                        slide
-                                                            .shapes
-                                                            .iter()
-                                                            .enumerate()
-                                                            .map(|(i, shape)| {
-                                                                let selected = self.selected == Some(i);
-                                                                let on_sel = this.clone();
-                                                                render_shape(
-                                                                    i,
-                                                                    shape,
-                                                                    selected,
-                                                                    c.clone(),
-                                                                    move |_, _, cx: &mut App| {
-                                                                        let _ = on_sel.update(
-                                                                            cx,
-                                                                            |v, cx| v.select_shape(i, cx),
-                                                                        );
-                                                                    },
-                                                                )
-                                                            })
-                                                            .collect::<Vec<_>>()
+                                div()
+                                    .relative()
+                                    .w(px(CANVAS_W))
+                                    .h(px(CANVAS_H))
+                                    .rounded_md()
+                                    .bg(c.content_bg)
+                                    .shadow_md()
+                                    .children(
+                                        pres
+                                            .slides
+                                            .get(current)
+                                            .map(|slide| {
+                                                slide
+                                                    .shapes
+                                                    .iter()
+                                                    .enumerate()
+                                                    .map(|(i, shape)| {
+                                                        let selected = self.selected == Some(i);
+                                                        let on_sel = this.clone();
+                                                        render_shape(
+                                                            i,
+                                                            shape,
+                                                            selected,
+                                                            c.clone(),
+                                                            move |_, _, cx: &mut App| {
+                                                                let _ = on_sel.update(
+                                                                    cx,
+                                                                    |v, cx| v.select_shape(i, cx),
+                                                                );
+                                                            },
+                                                        )
                                                     })
-                                                    .unwrap_or_default(),
-                                            ),
+                                                    .collect::<Vec<_>>()
+                                            })
+                                            .unwrap_or_default(),
+                                    ),
                             ),
                     ),
             )
@@ -460,6 +451,22 @@ impl Render for SlideView {
                         total
                     ))),
             )
+            .into_any_element();
+
+        // 构造 chrome 上下文并交给布局管理器渲染（标准 / 标签页式 由当前模式决定）。
+        let ctx = ChromeCtx {
+            model_kind: ModelKind::Slide,
+            name: self.name.clone(),
+            dirty: self.dirty,
+            sidebar_open: false,
+            tool_group,
+            on_save,
+            on_toggle_sidebar,
+            on_format,
+            on_switch_model,
+        };
+
+        UiLayoutManager::render_chrome(cx, window, ctx, body)
     }
 }
 

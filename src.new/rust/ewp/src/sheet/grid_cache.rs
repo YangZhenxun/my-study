@@ -12,7 +12,7 @@ use gpui::{App, Rgba, SharedString, TextRun, Window, px};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use crate::sheet_grid::{CELL_FONT_SIZE, CELL_PAD, CELL_W};
+use crate::sheet::grid::CELL_FONT_SIZE;
 use crate::styles::ThemeColors;
 
 /// 缓存键：行列坐标 + 显示文本 + 主题哈希。
@@ -78,11 +78,16 @@ impl GridTextCache {
             underline: None,
             strikethrough: None,
         };
+        // 第 4 参数是 GPUI 0.2.2 `shape_line` 的 `force_width`：一旦传入，
+        // `line_layout.rs` 会把每个字形强制等距推到 `0, fw, 2fw, ...`，
+        // 导致单元格文字在 x 轴被等宽拉伸散开。LibreOffice 普通字符串绘制
+        // 用的是自然宽度（`output2.cxx` 的 `DrawText`，不撑开），仅靠
+        // `eOutHorJust` 定位，所以这里传 `None`，让文字按自然宽度排版。
         let shaped = window.text_system().shape_line(
             SharedString::from(text.to_string()),
             px(CELL_FONT_SIZE),
             &[run],
-            Some(px(CELL_W - 2.0 * CELL_PAD)),
+            None,
         );
         self.map.borrow_mut().insert(key, shaped.clone());
         shaped

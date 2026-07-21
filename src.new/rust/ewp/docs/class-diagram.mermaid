@@ -1,0 +1,55 @@
+classDiagram
+    class ModelKind {
+        <<enum>>
+        Text
+        Sheet
+        Slide
+        + from_model(m: &Model) ModelKind
+    }
+    class ChromeCtx {
+        + model_kind: ModelKind
+        + name: SharedString
+        + dirty: bool
+        + tool_group: AnyElement
+        + on_save: Fn(&ClickEvent,&Window,&App)
+        + on_toggle_sidebar: Fn(...)
+        + on_format: Fn(&str,&ClickEvent,&Window,&App)
+        + on_switch_model: Fn(ModelKind,&Window,&App)
+    }
+    class UiLayout {
+        <<trait>>
+        + id() &'static str
+        + label() &'static str
+        + render_top(ctx, body, window, cx) AnyElement
+    }
+    class StandardToolbar {
+        + render_top(...)
+    }
+    class TabbedLayout {
+        + render_top(...)
+    }
+    class UiLayoutManager {
+        - registry: HashMap~&str, Box~dyn UiLayout~~
+        - current: &'static str
+        - per_model_default: HashMap~ModelKind, &str~
+        + register_layout(layout)
+        + current_layout() &dyn UiLayout
+        + current_mode() &'static str
+        + available_modes() Vec
+        + set_mode(id)
+        + default_mode_for(kind) &'static str
+        + render_chrome(ctx, body, window, cx) AnyElement
+        + global(cx) &UiLayoutManager
+        + global_mut(cx) &mut UiLayoutManager
+    }
+    class UiModeSettings {
+        + default: String
+        + per_model: HashMap~String,String~
+    }
+    UiLayout <|.. StandardToolbar : implements
+    UiLayout <|.. TabbedLayout : implements
+    UiLayoutManager o-- "registry" UiLayout : holds Box~dyn~
+    UiLayoutManager ..> UiModeSettings : persists via data_dir()
+    note for UiLayout "映射 LibreOffice：\nframework::UIElement (include/framework/uielement.hxx)\n+ XUIElement 接口；\n具体布局 ≈ ToolbarLayoutManager 装载的 toolbar\n或 sfx2::SfxNotebookBar / NotebookbarTabControl"
+    note for UiLayoutManager "映射 LibreOffice：\nToolbarLayoutManager (framework/source/layoutmanager/toolbarlayoutmanager.*)\n+ UIElementFactoryManager (framework/source/uifactory/uielementfactorymanager.cxx)\n+ ModuleUIConfigurationManager (framework/source/uiconfiguration/moduleuiconfigurationmanager.cxx)"
+    note for UiModeSettings "映射 LibreOffice：\nsfx2::SfxNotebookBar 持久化\n(org.openoffice.Office.UI.ToolbarMode/Applications/{App}/Active)"

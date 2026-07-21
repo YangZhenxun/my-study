@@ -65,6 +65,14 @@ menu:
     documentation: "Documentation"
     report_issue: "Report Issue..."
 
+ui:
+  mode_standard: "Standard Toolbar"
+  mode_tabbed: "Tabbed"
+  interface_mode: "Interface Mode"
+  doc_text: "Text"
+  doc_sheet: "Sheet"
+  doc_slide: "Slide"
+
 settings:
   title: "Settings"
   search_placeholder: "Search settings..."

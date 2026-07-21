@@ -62,7 +62,7 @@ pub fn load<T: DeserializeOwned>(path: &Path, fmt: NativeFormat) -> Result<T, St
 /// 需要时手动调用即可。用 `data::data_dir()` 而非相对路径，确保目录存在。
 #[allow(dead_code)]
 pub fn demo() {
-    use crate::model::text::Document;
+    use crate::text::model::Document;
 
     let doc = Document::default();
     let model = Model::Text(doc);

@@ -65,6 +65,14 @@ menu:
     documentation: "文件"
     report_issue: "回報問題..."
 
+ui:
+  mode_standard: "標準工具列"
+  mode_tabbed: "標籤頁式"
+  interface_mode: "介面模式"
+  doc_text: "文字"
+  doc_sheet: "表格"
+  doc_slide: "簡報"
+
 settings:
   title: "設定"
   search_placeholder: "搜尋設定..."

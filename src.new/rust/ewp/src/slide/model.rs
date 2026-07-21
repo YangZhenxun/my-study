@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::model::common::{Rgb, TextStyle};
-use crate::model::text::Run;
+use crate::text::model::Run;
 
 /// 形状几何（单位：逻辑像素）。
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]

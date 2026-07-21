@@ -65,6 +65,14 @@ menu:
     documentation: "文档"
     report_issue: "报告问题..."
 
+ui:
+  mode_standard: "标准工具栏"
+  mode_tabbed: "标签页式"
+  interface_mode: "界面模式"
+  doc_text: "文本"
+  doc_sheet: "表格"
+  doc_slide: "演示"
+
 settings:
   title: "设置"
   search_placeholder: "搜索设置..."

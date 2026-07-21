@@ -1,0 +1,48 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant View as SheetView (≈ sc::ScTabView 网格区)
+    participant State as SheetViewState (≈ sc::ScViewData)
+    participant Grid as sheet::grid (≈ sc::ScOutputData)
+    participant Cache as GridTextCache
+    participant Win as GPUI Window/App
+
+    Note over View,State: 启动/打开表：持有集中状态（直译 ScViewData 默认锚点）
+    View->>State: SheetViewState::new() // 等价 ScViewData 构造
+
+    Note over View,Grid: 每帧渲染：构造单 canvas（直译 ScGridWindow::Paint）
+    User->>View: 窗口需要重绘
+    View->>View: render() -> sheet-body 单 canvas(measure, paint)
+    View->>State: visible_cols/visible_rows(data_w, data_h) // 等价 GetPosFromPixel 范围
+    State-->>View: VisibleWindow { c0..c1, r0..r1 }
+    View->>Grid: compute_visible_window(data_w, data_h, scroll_x, scroll_y, cols, rows)
+    View->>Win: canvas.paint(bounds, state_snapshot, window, cx)
+
+    Note over Grid,State: paint 闭包：四区域同源公式 + 裁剪带（直译 ScOutputData::Draw*）
+    Grid->>State: cell_screen_x(c) / cell_screen_y(r) // 等价 GetScrPos - rem
+    State-->>Grid: (x, y)
+    Grid->>Win: with_content_mask(data_clip_rect) 绘制数据区 paint_cell_background
+    Grid->>Win: with_content_mask(col_header_clip_rect) 绘制列标头 paint_col_header
+    Grid->>Win: with_content_mask(row_header_clip_rect) 绘制行号 paint_row_number
+    Grid->>Win: with_content_mask(corner_rect) 绘制角 paint_corner（最后画，不裁剪）
+    Grid->>Cache: get_or_shape(row, col, text, theme, window, cx) // 等价 DrawText
+    Cache-->>Grid: ShapedLine
+    Grid->>Win: ShapedLine::paint(origin, line_height, window, cx)
+    Note over Grid,Win: 四区域两两不相交裁剪带（clip_four_rects_pairwise_disjoint 单测证明）
+
+    Note over User,State: 滚动：只改状态 + notify（直译 ScViewData::Scroll + Invalidate）
+    User->>View: on_wheel(ScrollWheelEvent)
+    View->>State: scroll_by(dx, dy, data_w, data_h, total_w, total_h)
+    State->>State: clamp() // 硬边界，不用 GPUI 惯性
+    View->>Win: cx.notify(view_entity) // 等价 Invalidate，触发下一帧重绘
+    Win->>View: 下一帧 render 重建 canvas 闭包(捕获最新 state 快照)
+
+    Note over User,State: 命中测试：屏幕像素 -> 单元格（直译 GetPosFromPixel 逆）
+    User->>View: on_mouse_down(MouseDownEvent)
+    View->>View: content = pos - canvas_ox/oy - HEADER_W/COL_HEADER_H + scroll
+    View->>State: content_to_cell(content.x, content.y)
+    State-->>View: (col, row)
+    View->>View: select_cell(col, row)
+    alt 双击 click_count >= 2
+        View->>View: begin_edit(window, cx, None)
+    end

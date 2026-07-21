@@ -1,21 +1,21 @@
 mod app_menus;
 mod data;
-mod editor_view;
 mod ewp_actions;
 mod extension;
 mod model;
 mod settings_view;
-mod sheet_grid;
-mod sheet_grid_cache;
-mod sheet_view;
-mod slide_view;
+mod sheet;
+mod slide;
 mod styles;
+mod text;
+mod ui;
 
 use data::AppData;
-use editor_view::EditorView;
 use ewp_actions::*;
-use sheet_view::SheetView;
-use slide_view::SlideView;
+use sheet::view::SheetView;
+use slide::view::SlideView;
+use text::editor_view::EditorView;
+use ui::manager::{load_initial_mode, UiLayoutManager};
 use gpui::{
     anchored, deferred, App, Application, AssetSource, Bounds, ClickEvent, Context, Corner,
     DefiniteLength, FontWeight, KeyBinding, MouseButton, MouseDownEvent, PathPromptOptions, Pixels,
@@ -681,7 +681,10 @@ fn confirm_button(
 /// 统一的「打开编辑器窗口」入口：内存文档，不写磁盘（保存弹窗以后再做）。
 /// - name：窗口标题（如 "Untitled" / 文件名）。
 /// - model：若提供则以其内容初始化（来自 .ewp），否则空白。
-fn open_editor(
+///
+/// `pub` 以便各视图在「文档类型切换 tab」（`ChromeCtx::on_switch_model`）里复用，
+/// 打开对应类型的新窗口（决策⑤）。
+pub fn open_editor(
     cx: &mut App,
     name: SharedString,
     model: Option<Model>,
@@ -942,6 +945,16 @@ fn setup_actions(cx: &mut App) {
     cx.on_action::<ZoomIn>(|_, _cx| eprintln!("[EWP] Zoom In"));
     cx.on_action::<ZoomOut>(|_, _cx| eprintln!("[EWP] Zoom Out"));
     cx.on_action::<ResetZoom>(|_, _cx| eprintln!("[EWP] Reset Zoom"));
+    // View —— 界面模式切换（标准工具栏 / 标签页式）
+    cx.on_action::<SetUiMode>(|action, cx| {
+        // mirrors LibreOffice: SfxNotebookBar::ExecMethod（保存激活模式 + 通知重绘）。
+        // action.0 是运行时 String，菜单只传 "standard"/"tabbed" 两字面量，安全映射回 &'static str。
+        let id: &'static str = match action.0.as_str() {
+            "tabbed" => "tabbed",
+            _ => "standard",
+        };
+        UiLayoutManager::global_mut(cx).set_mode(id);
+    });
     cx.on_action::<ToggleFullScreen>(|_, cx| {
         if let Some(handle) = cx.active_window() {
             let _ = handle.update(cx, |_, window, _| window.toggle_fullscreen());
@@ -1023,6 +1036,12 @@ fn main() {
             // 快捷键 & action 处理器
             setup_keybindings(cx);
             setup_actions(cx);
+
+            // 装载 UI 布局管理器（多套 UI 框架：standard / tabbed），并恢复已持久化的模式。
+            // mirrors LibreOffice: SfxNotebookBar 注册布局 + 读取激活模式
+            // （lcl_getNotebookbarFileName）。
+            cx.set_global(UiLayoutManager::new_with_defaults());
+            UiLayoutManager::global_mut(cx).set_mode(load_initial_mode());
 
             let bounds = Bounds::centered(None, size(px(800.), px(480.)), cx);
             cx.open_window(

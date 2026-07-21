@@ -1,0 +1,76 @@
+classDiagram
+    class Pane {
+        <<enum, mirrors LibreOffice: ScSplitPos / ScHSplitPos / ScVSplitPos>>
+        TopLeft
+        TopRight
+        BottomLeft
+        BottomRight
+    }
+    class SheetViewState {
+        <<struct, mirrors LibreOffice: sc::ScViewData (集中视图状态真相源)>>
+        + scroll_x: f32
+        + scroll_y: f32
+        + frozen_cols: usize
+        + frozen_rows: usize
+        + zoom: f32
+        + new() SheetViewState
+        + scroll_by(dx, dy, data_w, data_h, total_w, total_h)
+        + clamp(data_w, data_h, total_w, total_h)
+        + cell_to_screen(col, row, pane) (f32, f32)
+        + cell_screen_x(col) f32
+        + cell_screen_y(row) f32
+        + content_to_cell(x, y) (usize, usize)
+        + visible_cols(data_w, total_cols) (usize, usize)
+        + visible_rows(data_h, total_rows) (usize, usize)
+    }
+    class SheetView {
+        <<struct, mirrors LibreOffice: sc::ScTabView (网格区顶层控制器)>>
+        - state: SheetViewState
+        - text_cache: Entity~GridTextCache~
+        - selected: Option~(usize, usize)~
+        - editing: bool
+        + render(window, cx) impl IntoElement
+        + on_wheel(event, window, cx)
+        + on_mouse_down(event, window, cx)
+        + select_cell(col, row, cx)
+        + begin_edit(window, cx, initial)
+        + commit_edit(window, cx)
+        + cancel_edit(cx)
+    }
+    class GridTextCache {
+        <<struct, mirrors LibreOffice: 输出设备文字缓存>>
+        + get_or_shape(row, col, text, theme, window, cx) ShapedLine
+        + invalidate_for_sheet()
+    }
+    class grid_module {
+        <<module, mirrors LibreOffice: sc::ScOutputData (无状态绘制器)>>
+        + CELL_W / CELL_H / HEADER_W / COL_HEADER_H / CELL_PAD / CELL_FONT_SIZE : const f32
+        + col_left(c) f32
+        + row_top(r) f32
+        + compute_visible_window(...) VisibleWindow
+        + paint_cell_background(window, x, y, w, h, is_sel, theme)
+        + paint_row_number(window, x, y, w, h, r, theme)
+        + paint_col_header(window, x, y, w, h, name, is_sel, theme)
+        + paint_corner(window, x, y, theme)
+        + data_clip_rect(ox, oy, cw, ch) Bounds
+        + col_header_clip_rect(ox, oy, cw) Bounds
+        + row_header_clip_rect(ox, oy, ch) Bounds
+        + corner_rect(ox, oy) Bounds
+    }
+    class VisibleWindow {
+        + c0: usize
+        + c1: usize
+        + r0: usize
+        + r1: usize
+    }
+    SheetViewState --> Pane : 用于 cell_to_screen 分支
+    SheetView *-- SheetViewState : 持有(集中状态)
+    SheetView *-- GridTextCache : 消费缓存
+    SheetView ..> grid_module : paint 调无状态助手
+    SheetView ..> SheetViewState : cell_screen_x/y + content_to_cell
+    grid_module ..> VisibleWindow : 返回可见范围
+    grid_module ..> GridTextCache : 文字经缓存取形
+    note for SheetViewState "冻结=拆分特例：frozen>0 时 cell_to_screen 走 Pane 分支\n(冻结 pane 锁锚点 + origin 固定)，与 LibreOffice ScViewData 同源数学\nnPPT 因子已折叠进像素尺寸，坐标不再出现缇"
+    note for SheetView "单 canvas 红线：sheet-body 仅一个 canvas，\n四区域(角/列标头/行号/数据)由同一 paint 闭包用同源公式计算，\n经 with_content_mask 裁剪带；禁止 ScrollHandle/overflow_*/track_scroll/_b.origin"
+    note for grid_module "ScOutputData::DrawGrid/DrawStrings/Draw 的 Rust 直译：\n无状态 + 参数化(接收 &mut Window)，等价 LibreOffice 4-pane 共用绘制"
+    note for GridTextCache "paint 内必须 Entity::read 调用(RefCell 内部可变性)，\n禁止 Entity::update 重入 App::update(否则字形脱离画布坐标散乱)"

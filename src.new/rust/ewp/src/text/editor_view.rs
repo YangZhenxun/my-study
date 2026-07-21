@@ -2,7 +2,7 @@
 //!
 //! 布局（从外到内）：
 //! ┌─────────────────────────────────────────────────────┐
-//! │  工具栏：文件名 · B I U 对齐按钮 · 保存 · 侧栏开关    │
+//! │  [框架顶部栏：文件名 · B I U 对齐 · 保存 · 侧栏开关]   │  ← UiLayoutManager 统一套 chrome
 //! ├────────────────────────────┬────────────────────────┤
 //! │                            │  格式侧栏               │
 //! │  主画布编辑区（白底页面式）  │  [文本 ▾]              │
@@ -13,21 +13,31 @@
 //! ├────────────────────────────┴────────────────────────┤
 //! │  状态栏：行/列 · 总行数 · 字数 · 脏标记 ●             │
 //! └─────────────────────────────────────────────────────┘
+//!
+//! 顶部 chrome（工具栏）由 `UiLayoutManager` 调度：标准模式 =
+//! `StandardToolbar`（复刻原 `top_toolbar` 的框），标签页式 = `TabbedLayout`。
+//! 本视图只负责文档内容（body）+ 把 B/I/U/≡ 按钮组塞进 `ChromeCtx::tool_group`，
+//! 行为与旧版逐一对齐（见 `docs/system_design.md` §3、§4）。
 
+// mirrors LibreOffice: 本视图对应 `sw::Writer` 的编辑区；顶部 chrome 由
+// `sfx2::SfxNotebookBar` 调度的 toolbar 提供（见 `ui/layout.rs` / `ui/standard.rs`）。
 use gpui::{
-    anchored, deferred, App, ClickEvent, Context, Corner, DefiniteLength, Entity, FocusHandle,
-    Focusable, FontWeight, MouseButton, Pixels, Point, Render, Rgba, SharedString, Window, div, px,
-    point, rgba,
+    anchored, deferred, AnyElement, App, ClickEvent, Context, Corner, DefiniteLength, Entity,
+    FocusHandle, Focusable, FontWeight, MouseButton, Pixels, Point, Render, Rgba, SharedString,
+    Window, div, px, point, rgba,
 };
 use gpui::prelude::*;
 use gpui_component::input::{Input, InputEvent, InputState};
 use rust_i18n::t;
+use std::rc::Rc;
 
 use crate::data;
 use crate::model::ser::NativeFormat;
-use crate::model::text::{Block, Document, Paragraph, Run};
 use crate::model::Model;
 use crate::styles::ThemeColors;
+use crate::text::model::{Block, Document, Paragraph, Run};
+use crate::ui::layout::{ChromeCtx, ModelKind};
+use crate::ui::manager::UiLayoutManager;
 use std::path::PathBuf;
 
 // ════════════════════════════════════════
@@ -199,7 +209,6 @@ impl EditorView {
         }
     }
 
-
     /// 切换格式侧栏开/关。
     fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
         self.sidebar_open = !self.sidebar_open;
@@ -316,7 +325,6 @@ impl Focusable for EditorView {
     }
 }
 
-
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let this = cx.entity();
@@ -332,16 +340,14 @@ impl Render for EditorView {
         let caret_line = cursor.line as usize;
         let caret_col = cursor.character as usize;
 
-        // 格式切换回调（顶栏与侧栏的 B/I/U/对齐按钮共用）
-        let on_format = {
+        // 格式切换回调（顶栏与侧栏的 B/I/U/对齐按钮共用），以 Rc 形式交给 ChromeCtx。
+        let on_format: Rc<dyn Fn(&str, &ClickEvent, &mut Window, &mut App) + 'static> = {
             let this = this.clone();
-            move |which: &str, _: &ClickEvent, _: &mut Window, cx: &mut App| {
+            Rc::new(move |which: &str, _: &ClickEvent, _: &mut Window, cx: &mut App| {
                 let this = this.clone();
                 let w = which.to_string();
-                let _ = this.update(cx, |this, cx| {
-                    this.toggle_format(&w, cx)
-                });
-            }
+                let _ = this.update(cx, |this, cx| this.toggle_format(&w, cx));
+            })
         };
 
         // 字体下拉：点击触发器展开/收起
@@ -360,47 +366,54 @@ impl Render for EditorView {
             }
         };
 
-        // ── 根容器：横向排列（左画布区 + 右侧栏） ──
+        // 顶部 chrome 回调（保存 / 侧栏 / 文档类型切换）。
+        let on_save: Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static> = {
+            let this = this.clone();
+            Rc::new(move |_: &ClickEvent, _: &mut Window, cx: &mut App| {
+                let this = this.clone();
+                let _ = this.update(cx, |this, cx| this.save_document(cx));
+            })
+        };
+        let on_toggle_sidebar: Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static> = {
+            let this = this.clone();
+            Rc::new(move |_: &ClickEvent, _: &mut Window, cx: &mut App| {
+                let this = this.clone();
+                let _ = this.update(cx, |this, cx| this.toggle_sidebar(cx));
+            })
+        };
+        // 文档类型切换（Tabbed 的 tab 点击触发）：打开对应类型的新窗口（决策⑤）。
+        let on_switch_model: Rc<dyn Fn(ModelKind, &mut Window, &mut App) + 'static> = {
+            Rc::new(move |kind: ModelKind, _window: &mut Window, cx: &mut App| {
+                // mirrors LibreOffice: 切到另一 module（Writer/Calc/Impress）即开对应文档窗口。
+                let model = match kind {
+                    ModelKind::Text => Model::Text(crate::text::model::Document::default()),
+                    ModelKind::Sheet => Model::Sheet(crate::sheet::model::Workbook::default()),
+                    ModelKind::Slide => Model::Slide(crate::slide::model::Presentation::default()),
+                };
+                crate::open_editor(cx, "Untitled".into(), Some(model), None);
+            })
+        };
+
+        // 中间工具按钮组（B/I/U/≡），交给 StandardToolbar 嵌进统一框。
+        let tool_group = format_tools(on_format.clone());
+
+        // ── 文档内容 body（不含顶部栏，由框架套 chrome 后放在下方）──
         // 注意：焦点与键盘全部交给内嵌的 gpui-component Input（它自带 track_focus /
         // on_key_down / IME），根容器不再抢焦点，否则 Input 无法输入。
-        div()
+        let body = div()
             .id("editor-root")
-            .size_full()
+            .flex_1()
+            .min_h_0()
             .flex()
             .flex_row()
             .bg(c.window_bg)
-            // ═══ 左侧区域：工具栏 + 画布 + 状态栏 ═══
+            // ── 左区域：画布 + 状态栏 ──
             .child(
                 div()
                     .flex()
                     .flex_col()
                     .flex_1()
                     .min_w_0()
-                    // ── 顶栏 ──
-                    .child(top_toolbar(
-                        &name,
-                        self.dirty,
-                        self.sidebar_open,
-                        &c,
-                        {
-                            let this = this.clone();
-                            move |_, _, cx: &mut App| {
-                                let this = this.clone();
-                                let _ =
-                                    this.update(cx, |this, cx| this.save_document(cx));
-                            }
-                        },
-                        {
-                            let this = this.clone();
-                            move |_, _, cx: &mut App| {
-                                let this = this.clone();
-                                let _ = this.update(cx, |this, cx| {
-                                    this.toggle_sidebar(cx)
-                                });
-                            }
-                        },
-                        on_format.clone(),
-                    ))
                     // ── 画布外框（灰色背景模拟页面阴影） ──
                     .child(
                         div()
@@ -450,7 +463,10 @@ impl Render for EditorView {
                     &self.font_family,
                     self.color_index,
                     &c,
-                    on_format,
+                    {
+                        let f = on_format.clone();
+                        move |s: &str, e: &ClickEvent, w: &mut Window, cx: &mut App| f(s, e, w, cx)
+                    },
                     on_toggle_font_dropdown,
                     {
                         let this = this.clone();
@@ -531,114 +547,48 @@ impl Render for EditorView {
                 .with_priority(1);
                 root.child(backdrop).child(panel)
             })
+            .into_any_element();
+
+        // 构造 chrome 上下文并交给布局管理器渲染（标准 / 标签页式 由当前模式决定）。
+        let ctx = ChromeCtx {
+            model_kind: ModelKind::Text,
+            name,
+            dirty: self.dirty,
+            sidebar_open: self.sidebar_open,
+            tool_group,
+            on_save,
+            on_toggle_sidebar,
+            on_format,
+            on_switch_model,
+        };
+
+        UiLayoutManager::render_chrome(cx, window, ctx, body)
     }
 }
 
 // ════════════════════════════════════════
-// 组件：顶栏
+// 组件：顶部工具按钮组（交给框架嵌入统一框）
 // ════════════════════════════════════════
 
-/// 顶部工具栏：文件名（脏标记）+ 格式快捷按钮 + 保存 + 侧栏开关。
-fn top_toolbar(
-    name: &SharedString,
-    dirty: bool,
-    sidebar_open: bool,
-    c: &ThemeColors,
-    on_save: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-    on_toggle_sidebar: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-    on_format: impl Fn(&str, &ClickEvent, &mut Window, &mut App) + Clone + 'static,
-) -> impl IntoElement {
-    let title = if dirty {
-        format!("{name} *")
-    } else {
-        name.to_string()
-    };
-
+/// 中间格式快捷按钮组（B / I / U / ≡），作为 `AnyElement` 交给 `ChromeCtx::tool_group`。
+///
+/// mirrors LibreOffice: `sfx2::SfxNotebookBar` 中的 Writer 格式 toolbar 按钮组
+/// （粗体/斜体/下划线/对齐），由框架画在统一框的中部。
+fn format_tools(
+    on_format: Rc<dyn Fn(&str, &ClickEvent, &mut Window, &mut App) + 'static>,
+) -> AnyElement {
+    let c = ThemeColors::current();
     div()
         .flex()
         .flex_row()
         .items_center()
-        .justify_between()
-        .px(px(16.))
-        .py(px(6.))
-        .bg(c.sidebar_bg)
-        .border_b_1()
-        .border_color(c.border)
-        // 左：文件名
-        .child(
-            div()
-                .text_sm()
-                .font_weight(FontWeight::MEDIUM)
-                .text_color(c.text_muted)
-                .child(SharedString::from(title)),
-        )
-        // 中：格式快捷按钮组
-        .child(
-            div()
-                .flex()
-                .flex_row()
-                .items_center()
-                .gap_1()
-                .child(format_tool_btn("B", "tb-bold", "bold", c, on_format.clone()))
-                .child(format_tool_btn("I", "tb-italic", "italic", c, on_format.clone()))
-                .child(format_tool_btn("U", "tb-underline", "underline", c, on_format.clone()))
-                .child(div().w(px(4.))) // 分隔
-                .child(format_tool_btn("≡", "tb-align", "align", c, on_format.clone())),
-        )
-        // 右：保存 + 侧栏开关
-        .child(
-            div()
-                .flex()
-                .flex_row()
-                .items_center()
-                .gap_2()
-                .child(
-                    div()
-                        .id("toolbar-save")
-                        .flex()
-                        .items_center()
-                        .gap_1p5()
-                        .px_3()
-                        .py_1()
-                        .rounded_md()
-                        .bg(if dirty { c.accent } else { c.button_bg })
-                        .text_color(
-                            if dirty {
-                                rgba(0xffffffff)
-                            } else {
-                                c.text_primary
-                            },
-                        )
-                        .cursor_pointer()
-                        .hover(|s| s.opacity(0.85))
-                        .child(SharedString::from(t!("editor.save").to_string()))
-                        .on_click(on_save),
-                )
-                .child(
-                    div()
-                        .id("toolbar-sidebar-toggle")
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .w(px(28.))
-                        .h(px(28.))
-                        .rounded_md()
-                        .cursor_pointer()
-                        .hover(|s| s.bg(c.button_hover_bg))
-                        .bg(if sidebar_open {
-                            rgba(0x00000011)
-                        } else {
-                            rgba(0x00000000)
-                        })
-                        .text_sm()
-                        .font_weight(FontWeight::BOLD)
-                        .text_color(c.text_muted)
-                        .child(SharedString::from(
-                            if sidebar_open { "◧" } else { "☰" },
-                        ))
-                        .on_click(on_toggle_sidebar),
-                ),
-        )
+        .gap_1()
+        .child(format_tool_btn("B", "tb-bold", "bold", &c, on_format.clone()))
+        .child(format_tool_btn("I", "tb-italic", "italic", &c, on_format.clone()))
+        .child(format_tool_btn("U", "tb-underline", "underline", &c, on_format.clone()))
+        .child(div().w(px(4.))) // 分隔
+        .child(format_tool_btn("≡", "tb-align", "align", &c, on_format.clone()))
+        .into_any_element()
 }
 
 /// 单个格式快捷按钮（B / I / U / ≡）。
@@ -647,9 +597,9 @@ fn format_tool_btn(
     id: &'static str,
     key: &'static str,
     c: &ThemeColors,
-    on_format: impl Fn(&str, &ClickEvent, &mut Window, &mut App) + Clone + 'static,
+    on_format: Rc<dyn Fn(&str, &ClickEvent, &mut Window, &mut App) + 'static>,
 ) -> impl IntoElement {
-    let on_f = on_format.clone();
+    let on_f = on_format;
     div()
         .id(id)
         .flex()
@@ -734,10 +684,10 @@ fn format_sidebar(
         .child({
             // 各 tab 内容统一为 AnyElement 以便在 match 里选择
             let style = sidebar_style_content(
-                    font_size, bold, italic, underline,
-                    alignment, font_family, color_index, c,
-                    on_format, on_toggle_font_dropdown,
-                ).into_any_element();
+                font_size, bold, italic, underline,
+                alignment, font_family, color_index, c,
+                on_format, on_toggle_font_dropdown,
+            ).into_any_element();
             let layout = sidebar_layout_content(c).into_any_element();
             let more = sidebar_more_content(c).into_any_element();
 
