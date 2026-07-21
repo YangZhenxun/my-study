@@ -1,0 +1,54 @@
+%% 滚动条拖拽（只改 state + notify，红线 4）
+sequenceDiagram
+    participant U as 用户
+    participant SB as HScrollbar(div)
+    participant V as SheetView
+    participant S as SheetViewState
+    participant C as canvas(重绘)
+
+    U->>SB: mouse_down(thumb / track)
+    SB->>V: on_drag(target_scroll_x, window, cx)
+    V->>S: set_scroll_x(value, viewport_w, total_w)
+    S->>S: clamp([0, max(0, total-viewport)])
+    V->>V: cx.notify()
+    V->>C: 下一帧 render 重绘（thumb 同步）
+
+    Note over SB: 拖拽中 cx.capture_mouse 捕获全局 mouse_move
+    U->>SB: mouse_move(全局)
+    SB->>V: on_drag(new_scroll_x, window, cx)
+    V->>S: set_scroll_x(new_scroll_x, ...)
+    V->>C: notify → 重绘
+
+    Note over SB,U: 松手 → on_mouse_up → release_mouse，hscroll_drag=None
+
+%% 冻结拖拽（同源坐标反算，与 on_mouse_down 点击选中同一逆映射）
+sequenceDiagram
+    participant U as 用户
+    participant G as canvas(on_mouse_down)
+    participant V as SheetView
+    participant S as SheetViewState
+    participant C as canvas(重绘)
+
+    U->>G: mouse_down(列标头带右缘热区)
+    G->>V: freeze_drag = Some(Col); capture_mouse
+
+    U->>G: mouse_move(全局)
+    G->>V: on_freeze_drag(Col, content_x, _)
+    V->>S: content_to_cell(content_x, 0) → col
+    V->>S: set_frozen_cols(col)
+    V->>V: cx.notify()
+    V->>C: 重绘（grid 在 cell_to_screen(col,0,BR).x 画冻结分隔线）
+
+    Note over G,U: 松手 → release_mouse；双击手柄 / 拖回 0 取消冻结
+
+%% 状态栏派生（只读，不改状态）
+sequenceDiagram
+    participant R as render
+    participant V as SheetView
+    participant M as StatusBarModel
+    participant SB as render_status_bar
+
+    R->>V: derive_status_bar()
+    V->>M: 读 selected / state.zoom / workbook → 组装
+    R->>SB: render_status_bar(&model)
+    Note over SB: 纯展示，无 notify / 无状态写入

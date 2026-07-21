@@ -43,6 +43,19 @@ impl Default for GridTextCache {
 }
 
 impl GridTextCache {
+    // mirrors LibreOffice: sc/source/ui/view/output.cxx — ScOutputData::DrawStrings 文字取形 + OutputDevice 文本缓存语义
+    //   C++ DrawStrings：逐单元格用 OutputDevice::DrawText 绘制；LibreOffice 在 OutputDevice 层有字体/字形缓存
+    //                    （ImplFontCache），重复文本不重复 shape。对齐靠 eOutHorJust（数值 Right / 文本 Left），不拉伸字形。
+    //   Rust 逐行对应：
+    //     let key = CellCacheKey{ row, col, value, theme_hash };   // ≈ 输出设备文本缓存键（行列+内容+主题）
+    //     if let Some(shaped) = self.map.borrow().get(&key).cloned() { return shaped; }  // ≈ 命中缓存（不重 shape）
+    //     let run = TextRun{ len:text.len(), font, color, ... };
+    //     let shaped = window.text_system().shape_line(SharedString::from(text), px(CELL_FONT_SIZE), &[run], None);
+    //        // ≈ DrawText 取形；第 4 参 force_width=None → 自然宽（避免 GPUI 等宽拉伸陷阱，见下方注释；与 LibreOffice 一致）
+    //     self.map.borrow_mut().insert(key, shaped.clone());
+    //     shaped
+    //   偏差核对：EWP 用独立 Entity<GridTextCache> + RefCell（paint 内 Entity::read 只读访问，禁用 Entity::update 防重入）。
+    //            数值右对齐 / 文本左对齐在 view.rs 绘制处按 is_number 计算 origin_x（≈ eOutHorJust），此处只负责 shape。
     /// 取（或按需 shape）某单元格的 `ShapedLine`。
     /// `row` / `col` 仅用于区分缓存键；`theme` 用于文字颜色与主题失效。
     ///

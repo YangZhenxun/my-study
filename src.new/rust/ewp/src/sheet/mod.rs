@@ -7,6 +7,8 @@
 pub mod grid;
 pub mod grid_cache;
 pub mod model;
+pub mod scrollbar;
+pub mod status_bar;
 pub mod view;
 pub mod view_state;
 

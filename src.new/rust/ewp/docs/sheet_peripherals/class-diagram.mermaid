@@ -1,0 +1,71 @@
+classDiagram
+    class SheetViewState {
+        +f32 scroll_x
+        +f32 scroll_y
+        +usize frozen_cols
+        +usize frozen_rows
+        +f32 zoom
+        +set_scroll_x(value, data_w, total_w)
+        +set_scroll_y(value, data_h, total_h)
+        +set_frozen_cols(cols)
+        +set_frozen_rows(rows)
+        +clamp(data_w, data_h, total_w, total_h)
+        +cell_to_screen(col, row, pane) (f32, f32)
+        +content_to_cell(x, y) (usize, usize)
+        +scroll_by(dx, dy, ...)  // 现有
+    }
+
+    class SheetView {
+        -SheetViewState state
+        -f32 total_w
+        -f32 total_h
+        -f32 viewport_w
+        -f32 viewport_h
+        -Option~f32~ hscroll_drag
+        -Option~f32~ vscroll_drag
+        -Option~FreezeAxis~ freeze_drag
+        +render()
+        +on_scrollbar_drag(axis, value, cx)
+        +on_freeze_drag(axis, content_x, content_y, cx)
+        +derive_status_bar() StatusBarModel
+    }
+
+    class Scrollbar {
+        <<module scrollbar.rs>>
+        +ScrollbarThumb
+        +thumb_metrics(scroll, viewport, total, track_len) ScrollbarThumb
+        +scroll_from_thumb(start, track_len, viewport, total) f32
+        +render_h_scrollbar(state, total_w, viewport_w, track_len, on_drag)
+        +render_v_scrollbar(state, total_h, viewport_h, track_len, on_drag)
+    }
+
+    class StatusBar {
+        <<module status_bar.rs>>
+        +StatusBarModel
+        +render_status_bar(model)
+    }
+
+    class Grid {
+        <<module grid.rs>>
+        +paint_freeze_splitter(window, state, ox, oy, cw, ch, theme)
+        +freeze_split_line(state, ox, oy) (f32, f32)
+    }
+
+    class FreezeAxis {
+        <<enum>>
+        Col
+        Row
+    }
+
+    SheetView *-- SheetViewState : 持有唯一真相源
+    SheetView ..> Scrollbar : 装配+传 state/total/viewport
+    SheetView ..> StatusBar : 装配+传 derive model
+    SheetView ..> Grid : 调 paint_freeze_splitter
+    SheetView ..> FreezeAxis : 冻结拖拽 axis
+    Scrollbar ..> SheetViewState : 读 scroll/total 派生 thumb
+    StatusBar ..> SheetView : derive 只读读取
+    Grid ..> SheetViewState : 读 frozen 画分隔线
+
+    note for SheetViewState "红线：唯一真相源\n滚动条/冻结手柄只经它驱动 canvas"
+    note for Scrollbar "自绘 div+thumb\n比例算法 viewport/total, scroll/total"
+    note for StatusBar "纯只读派生展示\n不写任何状态"

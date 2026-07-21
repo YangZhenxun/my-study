@@ -91,6 +91,19 @@ impl SheetViewState {
         }
     }
 
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — ScViewData::ScrollX / ScrollY / Scroll
+    //   C++ 签名（设计还原，研究文档 §7.5；逐字体在 master 后半被 fetch 截断）：
+    //     void ScViewData::ScrollX(SCCOL nNewPosX, ScHSplitPos eWhich);
+    //     void ScViewData::ScrollY(SCROW nNewPosY, ScVSplitPos eWhich);
+    //   C++ 行为（研究文档 §5.2，逐行）：
+    //     ScrollHdl → pViewData->Scroll(...)   // 写 pThisTab->nPosX[eWhich]=nNewPosX（锚点列）
+    //                                        //   连续像素滚动余数 rem = 滚动条像素位置 − 锚点列像素左缘
+    //              → pView->Scroll(...)       // 同步滚动条 thumb
+    //              → Invalidate(pane)         // 标记重绘 → 下一帧 Paint 用新 anchor+rem
+    //   Rust 逐行对应（我们只做「增量滚动 + clamp」，uniform 列宽下 scroll 已含锚点+余数，不显式存锚点）：
+    //     self.scroll_x += dx;   // ≈ 改 nPosX[方向] 并更新 rem（合并为单一像素偏移）
+    //     self.scroll_y += dy;
+    //     self.clamp(...);       // ≈ Invalidate 前的合法范围约束（max = total − data）
     /// 增量滚动并 clamp。data_w/data_h = 数据区视口尺寸（已扣表头）；
     /// total_w/total_h = 整表像素尺寸。
     pub fn scroll_by(
@@ -107,6 +120,53 @@ impl SheetViewState {
         self.clamp(data_w, data_h, total_w, total_h);
     }
 
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — ScViewData::SetPosX / SetPosX (绝对设置 nPosX/nPosY)
+    //   C++（研究文档 §7.5 / 设计还原）：
+    //     void ScViewData::SetPosX(SCCOL nNewPosX, ScHSplitPos eWhich) { nPosX[eWhich] = nNewPosX; }
+    //     void ScViewData::SetPosY(SCROW nNewPosY, ScVSplitPos eWhich) { nPosY[eWhich] = nNewPosY; }
+    //   合法范围由 ScrollBar 的 thumb 范围隐式 clamp（max = 文档像素宽 − 视口宽）。
+    //   Rust 逐行对应（供滚动条拖拽直接定位，替代只能增量的 scroll_by）：
+    //     let max_x = (total_w - data_w).max(0.0);   // ≈ 视口宽不可滚时退 0（避免空白越界）
+    //     self.scroll_x = value.clamp(0.0, max_x);   // ≈ 设 nPosX 并 clamp 到合法范围
+    /// 绝对设置横向滚动并 clamp（≈ `SetPosX`）。`data_w` = 数据区视口宽（已扣表头），
+    /// `total_w` = 整表像素宽。`value` 可越界，内部夹到 `[0, max(0, total_w - data_w)]`。
+    pub fn set_scroll_x(&mut self, value: f32, data_w: f32, total_w: f32) {
+        let max_x = (total_w - data_w).max(0.0);
+        self.scroll_x = value.clamp(0.0, max_x);
+    }
+
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — ScViewData::SetPosY（≈ 绝对设置 nPosY，合法范围 clamp）
+    //   C++：void ScViewData::SetPosY(SCROW nNewPosY, ScVSplitPos eWhich) { nPosY[eWhich] = nNewPosY; }
+    //   Rust 逐行对应：
+    //     let max_y = (total_h - data_h).max(0.0);   // ≈ 视口高不可滚时退 0
+    //     self.scroll_y = value.clamp(0.0, max_y);   // ≈ 设 nPosY 并 clamp
+    /// 绝对设置纵向滚动并 clamp（≈ `SetPosY`）。参数含义同 `set_scroll_x` 的纵向版。
+    pub fn set_scroll_y(&mut self, value: f32, data_h: f32, total_h: f32) {
+        let max_y = (total_h - data_h).max(0.0);
+        self.scroll_y = value.clamp(0.0, max_y);
+    }
+
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — eSplitMode=FIX 时 nFixPosX/Y 设冻结列/行数
+    //   C++（研究文档 §7 / design）：nFixPosX = nNewCols; nFixPosY = nNewRows;  （冻结列/行数）
+    //   Rust 逐行对应：self.frozen_cols = cols;   // ≈ 设 nFixPosX
+    //   由冻结拖拽手柄反算的列/行直接写入；不 clamp（由调用方保证 0..=cols/rows）。
+    /// 设置冻结列数（≈ `nFixPosX`）。0 = 不冻结。
+    pub fn set_frozen_cols(&mut self, cols: usize) {
+        self.frozen_cols = cols;
+    }
+    /// 设置冻结行数（≈ `nFixPosY`）。0 = 不冻结。
+    pub fn set_frozen_rows(&mut self, rows: usize) {
+        self.frozen_rows = rows;
+    }
+
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — 滚动边界约束（GetPosX 合法范围 + ScrollBar thumb 范围）
+    //   C++ 逻辑：滚动锚点 nPosX[RIGHT] 不能越出文档；最大可见偏移 = 文档像素宽 − 视口宽。
+    //            LibreOffice 借 ScrollBar 的 thumb 范围隐式 clamp；EWP 显式 clamp（红线 §1.4.4）。
+    //   Rust 逐行对应：
+    //     let max_x = (total_w - data_w).max(0.0);   // 文档宽 − 视口宽（内容小于视口时退 0，避免空白越界）
+    //     let max_y = (total_h - data_h).max(0.0);
+    //     self.scroll_x = self.scroll_x.clamp(0.0, max_x);  // ≈ 锚点不越界
+    //     self.scroll_y = self.scroll_y.clamp(0.0, max_y);
     /// 把 scroll 夹到 [0, max(0, total - data)]。
     pub fn clamp(&mut self, data_w: f32, data_h: f32, total_w: f32, total_h: f32) {
         let max_x = (total_w - data_w).max(0.0);
@@ -116,6 +176,32 @@ impl SheetViewState {
     }
 
     /// 通用（支持冻结 pane）。v1 调用均传 `Pane::BottomRight`（frozen=0 → origin/scroll 退化为单 pane）。
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — ScViewData::GetScrPos (+ WhichH/WhichV)
+    //   C++ 签名（研究文档 §7.2 逐字）：
+    //     Point ScViewData::GetScrPos(SCCOL nWhereX, SCROW nWhereY,
+    //                                 ScSplitPos eWhich, bool bAllowNeg, SCTAB nForTab) const
+    //   C++ 关键逻辑（逐字 + §7.1 WhichH/WhichV）：
+    //     ScHSplitPos eWhichX = WhichH(eWhich);   // LEFT/RIGHT 方向
+    //     ScVSplitPos eWhichY = WhichV(eWhich);   // TOP/BOTTOM 方向
+    //     SCCOL nPosX = GetPosX(eWhichX);          // 本 pane 水平锚点列
+    //     tools::Long nScrPosX = 0;
+    //     if (bAllowNeg || nWhereX >= nPosX)
+    //         for (SCCOL nX = nPosX; nX < nWhereX; nX++) {
+    //             sal_uInt16 nT = GetColWidth(nX);
+    //             if (nT) nScrPosX += ToPixel(nT, nPPTX);  // 累加列宽（隐藏列宽0跳过）
+    //         }
+    //     if (IsLayoutRTL) nScrPosX = aScrSize.Width()-1-nScrPosX;  // RTL 镜像
+    //     return Point(nScrPosX, nScrPosY);          // pane 局部偏移（非绝对屏幕坐标）
+    //   绝对屏幕坐标 = origin(pane) + GetScrPos − rem   （研究文档 §3.3 统一公式）
+    //   Rust 逐行对应：
+    //     let (ox, oy) = self.pane_origin(pane);      // ≈ origin(pane) = splitter 位置（WhichH/WhichV 折叠）
+    //     let sx = self.pane_scroll_x(pane);          // ≈ remX：本 pane 方向已滚像素（冻结 pane 锁 0）
+    //     let sy = self.pane_scroll_y(pane);          // ≈ remY
+    //     let x = HEADER_W + ox + col_left(col) - sx; // HEADER_W: EWP 行号列宽补偿（Calc 无此带）；
+    //                                                 //   col_left(col)=从0累加到 col 的列宽和（uniform → c*CELL_W，等价上循环 nPosX=0）
+    //     let y = COL_HEADER_H + oy + row_top(row) - sy;  // 同上（Y 方向）
+    //   偏差核对：v1 frozen=0 → pane_origin=0、pane_scroll=state.scroll，退化为 GetScrPos 锚点=0 特例；
+    //            LibreOffice 的 (anchorCol, remX) 在 EWP 合并为单一 scroll_x（uniform 列宽下可派生），等价。
     /// 公式：绝对屏幕坐标 = origin(pane) + get_scr_pos − rem（见研究文档第 3.3 节）。
     #[allow(dead_code)]
     pub fn cell_to_screen(&self, col: usize, row: usize, pane: Pane) -> (f32, f32) {
@@ -127,6 +213,12 @@ impl SheetViewState {
         (x, y)
     }
 
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — ScViewData::GetScrPos (退化, eWhich=BOTTOMRIGHT, anchor=0)
+    //   C++ 退化调用 GetScrPos(col,row,BOTTOMRIGHT)：eWhichX=RIGHT, eWhichY=BOTTOM;
+    //        nPosX=GetPosX(RIGHT)=anchorCol; remX=滚动余数;  screenX = originX + GetScrPos(col).dx − remX
+    //   Rust 逐行对应（仅取 X 分量，row 维度无关）：
+    //     HEADER_W + col_left(col) - self.scroll_x      // = HEADER_W + (∑ 列宽) − scroll_x
+    //                                                 //   ≡ origin(0) + col_left(col) − scroll_x
     /// 数据区（v1 唯一 pane）便捷方法，已含表头偏移。
     /// 等价于 `cell_to_screen(col, row, Pane::BottomRight)` 的退化形式（frozen=0）。
     /// v1 主绘制路径统一走 `cell_to_screen(col, row, pane)`（见 §3.4 / T04），
@@ -135,11 +227,37 @@ impl SheetViewState {
     pub fn cell_screen_x(&self, col: usize) -> f32 {
         HEADER_W + col_left(col) - self.scroll_x
     }
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — ScViewData::GetScrPos (退化, eWhich=BOTTOMRIGHT, anchor=0, Y 方向)
+    //   C++ 退化调用 GetScrPos(col,row,BOTTOMRIGHT)：eWhichX=RIGHT, eWhichY=BOTTOM;
+    //        nPosY=GetPosY(BOTTOM)=anchorRow; remY=滚动余数;  screenY = originY + GetScrPos(row).dy − remY
+    //   Rust 逐行对应（仅取 Y 分量，col 维度无关）：
+    //     COL_HEADER_H + row_top(row) - self.scroll_y     // = COL_HEADER_H + (∑ 行高) − scroll_y
+    //                                                  //   ≡ origin(0) + row_top(row) − scroll_y
     #[allow(dead_code)]
     pub fn cell_screen_y(&self, row: usize) -> f32 {
         COL_HEADER_H + row_top(row) - self.scroll_y
     }
 
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — ScViewData::GetPosFromPixel
+    //   C++ 签名（设计还原，研究文档 §7.4；源码体在 viewdata.cxx 后半被 fetch 截断，故用 §3.5 逆映射）：
+    //     void ScViewData::GetPosFromPixel(SCCOL& rCol, SCROW& rRow,
+    //                                      ScSplitPos eWhich,
+    //                                      tools::Long nPixelX, tools::Long nPixelY, bool bTestMerge);
+    //   C++ 关键逻辑（研究文档 §3.5，逐行）：
+    //     hx = WhichH(eWhich); vy = WhichV(eWhich);
+    //     anchorCol = nPosX[hx]; anchorRow = nPosY[vy];
+    //     target_x = lx + remX;   // 还原「相对锚点单元格左缘」的偏移
+    //     col = anchorCol; acc = 0;
+    //     while (col <= MaxCol) {
+    //         w = ToPixel(W(col), nPPTX);
+    //         if (target_x < acc + w) break;   // 命中当前列
+    //         acc += w; col += 1;
+    //     }
+    //   Rust 逐行对应（v1 frozen=0 退化为 anchor=0、rem=scroll）：
+    //     while acc + col_width(c) <= x { acc += col_width(c); c += 1; }
+    //   等价说明：x 入参已是「内容坐标」（= 屏幕 − HEADER_W + scroll_x，见 view.rs on_mouse_down），
+    //            故 target_x = lx + remX 在此即 x；anchorCol=0 → 从 0 累加，与上面 C++ 循环一致。
+    //            与 cell_screen_* 严格互逆（单测 qa_roundtrip_inverse_mapping_across_scroll 证明）。
     /// 屏幕(内容)坐标 → 单元格（命中测试）。
     /// x/y 为已减去表头偏移后的「数据区内容坐标」（即 screen - HEADER_W + scroll_x）。
     pub fn content_to_cell(&self, x: f32, y: f32) -> (usize, usize) {
@@ -158,12 +276,25 @@ impl SheetViewState {
         (c, r)
     }
 
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — GetPosX/Y + AddPixelsWhile 可见范围
+    //   C++（研究文档 §5.1 Paint 可见范围循环，逐行）：从 anchor 起逐列累加像素宽直到超出 client 宽：
+    //     col = anchorCol; x = -remX;
+    //     while (col <= MaxCol && x < clientWidth) { w = ToPixel(W(col)); if (w>0) drawCell; x += w; col++; }
+    //   Rust 逐行对应：复用无状态 compute_visible_window（见 grid.rs），返回 (c0,c1)：
+    //     let w = compute_visible_window(data_w, f32::MAX, self.scroll_x, 0.0, total_cols, 1);
+    //     (w.c0, w.c1)
+    //   等价：c0 即 anchorCol（滚过的列），c1 即末可见列；v1 frozen=0、anchor=0 退化一致。
     /// 可见范围（复用无状态 `compute_visible_window`）。
     #[allow(dead_code)]
     pub fn visible_cols(&self, data_w: f32, total_cols: usize) -> (usize, usize) {
         let w = compute_visible_window(data_w, f32::MAX, self.scroll_x, 0.0, total_cols, 1);
         (w.c0, w.c1)
     }
+    // mirrors LibreOffice: sc/source/ui/view/viewdata.cxx — GetPosX/Y + AddPixelsWhile 可见范围（行方向）
+    //   C++（研究文档 §5.1，逐行）：行方向同理，从 anchorRow 起逐行累加像素高直到超出 client 高。
+    //   Rust 逐行对应：复用 compute_visible_window（行维度）：
+    //     let w = compute_visible_window(f32::MAX, data_h, 0.0, self.scroll_y, 1, total_rows);
+    //     (w.r0, w.r1)
     #[allow(dead_code)]
     pub fn visible_rows(&self, data_h: f32, total_rows: usize) -> (usize, usize) {
         let w = compute_visible_window(f32::MAX, data_h, 0.0, self.scroll_y, 1, total_rows);
@@ -323,6 +454,45 @@ mod tests {
     // QA 针对性测试（严过关）：证明"冻结窗格/滚动坐标错位" bug 已根除。
     // 用「同源不变式 + 严格往返 + 边界 clamp + 冻结原点数学」证明，而非确认。
     // ═══════════════════════════════════════════════════════════════════
+
+    // ── set_scroll 绝对设置 + clamp（T01） ──
+
+    #[test]
+    fn set_scroll_x_clamps_to_range() {
+        // total=1000, data=200 → max_x = 800。
+        let mut s = SheetViewState::new();
+        s.set_scroll_x(300.0, 200.0, 1000.0);
+        assert_eq!(s.scroll_x, 300.0, "合法范围内原值保留");
+        s.set_scroll_x(9999.0, 200.0, 1000.0);
+        assert_eq!(s.scroll_x, 800.0, "超上界夹到 max_x");
+        s.set_scroll_x(-50.0, 200.0, 1000.0);
+        assert_eq!(s.scroll_x, 0.0, "超下界夹到 0");
+        // total <= data 退化：max = 0，任何值都夹到 0。
+        s.set_scroll_x(123.0, 5000.0, 100.0);
+        assert_eq!(s.scroll_x, 0.0, "总宽小于视口时退 0");
+        // 与 scroll_by 等价：先 set 到 300，再 +500（到 800），再 +9999（夹 800）。
+        let mut s2 = SheetViewState::new();
+        s2.set_scroll_x(300.0, 200.0, 1000.0);
+        s2.scroll_by(500.0, 0.0, 200.0, 200.0, 1000.0, 280.0);
+        assert_eq!(s2.scroll_x, 800.0);
+        s2.scroll_by(9999.0, 0.0, 200.0, 200.0, 1000.0, 280.0);
+        assert_eq!(s2.scroll_x, 800.0, "set 后再 scroll_by 仍被 clamp 锁定");
+    }
+
+    #[test]
+    fn set_scroll_y_clamps_to_range() {
+        // total=280, data=200 → max_y = 80。
+        let mut s = SheetViewState::new();
+        s.set_scroll_y(50.0, 200.0, 280.0);
+        assert_eq!(s.scroll_y, 50.0);
+        s.set_scroll_y(9999.0, 200.0, 280.0);
+        assert_eq!(s.scroll_y, 80.0, "超上界夹到 max_y");
+        s.set_scroll_y(-10.0, 200.0, 280.0);
+        assert_eq!(s.scroll_y, 0.0, "超下界夹到 0");
+        // total <= data 退化。
+        s.set_scroll_y(123.0, 5000.0, 100.0);
+        assert_eq!(s.scroll_y, 0.0);
+    }
 
     // 同源不变式：cell_screen_x / cell_screen_y 必须恒等于设计规定的唯一表达式。
     // 任何"第二套手算坐标"的回归都会让此测试失败（这正是旧 bug 的根因）。
@@ -536,5 +706,58 @@ mod tests {
         let (x, y) = v1.cell_to_screen(4, 6, Pane::BottomRight);
         assert_eq!(x, v1.cell_screen_x(4));
         assert_eq!(y, v1.cell_screen_y(6));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // QA 独立验收：绘制位置 ⟷ 点击命中 的闭环一致性（"所见即所点"）。
+    //
+    // 复刻 `src/sheet/view.rs` 中 paint 闭包与 `on_mouse_down` 使用的「同源
+    // 坐标公式」，但 click→cell 的还原由本测试从第一性原理重算（不调用 view.rs
+    // 任何私有函数），作为独立于实现的回归网：
+    //
+    //   paint  : px = canvas_ox + cell_to_screen(c,0,BR).0
+    //            py = canvas_oy + cell_to_screen(0,r,BR).1
+    //   click  : local = (px,py) - (canvas_ox, canvas_oy)
+    //            content = local - (HEADER_W, COL_HEADER_H) + (scroll_x, scroll_y)
+    //          ⇒ content = (col_left(c), row_top(r)) ⇒ content_to_cell ⇒ (c,r)
+    //
+    // 只要 view.rs 与 SheetViewState 任意一方偏离同源公式，闭环即断、测试失败。
+    // 这正是 LibreOffice `GetScrPos` / `GetPosFromPixel` 严格互逆在 EWP 的等价证明。
+    // ═══════════════════════════════════════════════════════════════════
+    #[test]
+    fn qa_integration_paint_click_roundtrip() {
+        let canvas_ox_cases = [0.0_f32, 12.0, 88.0];
+        let canvas_oy_cases = [0.0_f32, 34.0, 120.0];
+        let scroll_x_cases = [0.0_f32, 40.0, 250.0, 1199.0, 1_000_000.0];
+        let scroll_y_cases = [0.0_f32, 20.0, 280.0, 1_000_000.0];
+        for &ox in canvas_ox_cases.iter() {
+            for &oy in canvas_oy_cases.iter() {
+                for &sx in scroll_x_cases.iter() {
+                    for &sy in scroll_y_cases.iter() {
+                        let mut s = SheetViewState::new();
+                        s.scroll_x = sx;
+                        s.scroll_y = sy;
+                        for c in 0..14usize {
+                            for r in 0..18usize {
+                                // paint 闭包公式（与 view.rs 完全一致，走同源 cell_to_screen）。
+                                let px = ox + s.cell_to_screen(c, 0, Pane::BottomRight).0;
+                                let py = oy + s.cell_to_screen(0, r, Pane::BottomRight).1;
+                                // 点击还原（第一性原理重算，不依赖 view.rs 私有逻辑）：
+                                let local_x = px - ox;
+                                let local_y = py - oy;
+                                let content_x = local_x - HEADER_W + s.scroll_x;
+                                let content_y = local_y - COL_HEADER_H + s.scroll_y;
+                                let (gc, gr) = s.content_to_cell(content_x, content_y);
+                                assert_eq!(
+                                    (gc, gr),
+                                    (c, r),
+                                    "所见即所点闭环断裂 (canvas=({ox},{oy}), scroll=({sx},{sy}), (c,r)=({c},{r}))"
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

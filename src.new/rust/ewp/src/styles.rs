@@ -72,3 +72,28 @@ impl ThemeColors {
         crate::extension::ExtensionHost::shared().colors_for(&theme_id)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::rgb;
+
+    // 文档约定：`Default` 是主题文件解析失败时的安全「全黑」回退配色。
+    // 公式栏深色修复依赖「回退也是深色」这一不变量：content_bg 与 sidebar_bg
+    // 同为黑，不会出现 gpui-component 自带近黑 #0a0a0a 与 sidebar_bg(#252526) 的
+    // 亮度差导致的突兀。此处把该回退契约锁死，防有人把 Default 改亮。
+    #[test]
+    fn default_is_all_black_dark_fallback() {
+        let c = ThemeColors::default();
+        // 背景族全黑（与文档「全黑配色」一致）。
+        assert_eq!(c.window_bg, rgb(0x000000));
+        assert_eq!(c.sidebar_bg, rgb(0x000000));
+        assert_eq!(c.content_bg, rgb(0x000000));
+        // 文字为白，保证深色回退下可读。
+        assert_eq!(c.text_primary, rgb(0xffffff));
+        assert_eq!(c.border, rgb(0x333333));
+        // 关键不变量：深色回退下 inset(content_bg) 与公式栏底(sidebar_bg)同色，
+        // 不会出现亮度差。公式栏修复正依赖 content_bg 在真实深色主题里是暗色。
+        assert_eq!(c.content_bg, c.sidebar_bg);
+    }
+}
